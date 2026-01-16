@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: youtube-extarctor
+
+server:
+  port: 8081
+
+
+youtube:
+  api-key: ${YOUTUBE_API_KEY}
