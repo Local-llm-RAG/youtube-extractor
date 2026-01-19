@@ -15,7 +15,7 @@ spring:
   application:
     name: youtube-extractor
   datasource:
-    url: jdbc:postgresql://localhost:5432/youtube-extractor
+    url: jdbc:postgresql://localhost:5433/youtube-extractor
     username: postgres
     password: cost#123$
     driver-class-name: org.postgresql.Driver
