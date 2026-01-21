@@ -18,7 +18,7 @@ public class YouTubeChannelVideosController {
 
     @Operation(summary = "Get all video IDs for a channel handle")
     @GetMapping("/videos")
-    public ResponseEntity<List<String>> getVideoIds(@RequestParam String handle) throws Exception {
-        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle));
+    public ResponseEntity<List<String>> getVideoIds(@RequestParam String handle, @RequestParam Boolean runTranscriptsSavingForAll) throws Exception {
+        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle, runTranscriptsSavingForAll));
     }
 }
