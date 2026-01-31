@@ -1,14 +1,12 @@
 package com.youtube.service.youtube;
 
 import com.google.api.services.youtube.YouTube;
-import com.google.api.services.youtube.model.ChannelListResponse;
-import com.google.api.services.youtube.model.PlaylistItemListResponse;
-import com.google.api.services.youtube.model.VideoCategoryListResponse;
-import com.google.api.services.youtube.model.VideoListResponse;
+import com.google.api.services.youtube.model.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -52,5 +50,20 @@ public class YouTubeGateway {
                 .setRegionCode(regionCode)
                 .setKey(apiKey)
                 .execute();
+    }
+
+    public I18nRegionListResponse getAllRegions() throws IOException {
+        return youtube.i18nRegions()
+                .list(List.of("snippet"))
+                .setKey(apiKey)
+                .execute();
+
+    }
+    public I18nLanguageListResponse getAllLanguages() throws IOException {
+        return youtube.i18nLanguages()
+                .list(List.of("snippet"))
+                .setKey(apiKey)
+                .execute();
+
     }
 }

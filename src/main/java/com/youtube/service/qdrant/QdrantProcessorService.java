@@ -30,22 +30,22 @@ public class QdrantProcessorService implements Job {
 
     @Override
     public void execute(JobExecution execution) {
-        youTubeInternalService.findAllChannels()
-                .stream()
-                .forEach(channel -> {
-                    List<Video> videosWithTranscript = youTubeInternalService.findAllVideosForChannel(channel)
-                            .parallelStream()
-                            .filter(Video::isTranscriptPassed)
-                            .filter(vid -> Objects.nonNull(vid.getVideoTranscript()))
-                            .toList();
-                    videosWithTranscript
-                            .stream()
-                            .map(video ->
-                                    new AbstractMap.SimpleEntry<>(video, pythonRestApiClient.embedTranscript(buildEmbedTranscriptRequest(video.getVideoTranscript().getTranscriptText()))))
-                            .forEach(videoWithEmbeddings ->
-                                    qdrantGrpsClient.insertPoints(channel, videoWithEmbeddings.getKey(), videoWithEmbeddings.getValue(), "bulgarian")
-                            );
-                });
+//        youTubeInternalService.findAllChannels()
+//                .stream()
+//                .forEach(channel -> {
+//                    List<Video> videosWithTranscript = youTubeInternalService.findAllVideosForChannel(channel)
+//                            .parallelStream()
+//                            .filter(Video::isTranscriptPassed)
+//                            .filter(vid -> Objects.nonNull(vid.getVideoTranscript()))
+//                            .toList();
+//                    videosWithTranscript
+//                            .stream()
+//                            .map(video ->
+//                                    new AbstractMap.SimpleEntry<>(video, pythonRestApiClient.embedTranscript(buildEmbedTranscriptRequest(video.getVideoTranscript().getTranscriptText()))))
+//                            .forEach(videoWithEmbeddings ->
+//                                    qdrantGrpsClient.insertPoints(channel, videoWithEmbeddings.getKey(), videoWithEmbeddings.getValue(), "bulgarian")
+//                            );
+//                });
     }
 
     private EmbedTranscriptRequest buildEmbedTranscriptRequest(String transcriptText) {
