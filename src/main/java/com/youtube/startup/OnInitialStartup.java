@@ -1,15 +1,9 @@
 package com.youtube.startup;
 
 import com.youtube.locks.PostgresAdvisoryLock;
-import com.youtube.startup.RegionBootstrapService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor

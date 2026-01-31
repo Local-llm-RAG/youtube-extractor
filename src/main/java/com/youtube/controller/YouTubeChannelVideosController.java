@@ -21,8 +21,8 @@ public class YouTubeChannelVideosController {
     public ResponseEntity<List<String>> getVideoIds(
             @RequestParam String handle,
             @RequestParam Boolean runTranscriptsSavingForAll,
-            @RequestParam String regionCode
+            @RequestParam List<String> desiredLanguages
             ) throws Exception {
-        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle, runTranscriptsSavingForAll, regionCode));
+        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle, runTranscriptsSavingForAll, desiredLanguages));
     }
 }

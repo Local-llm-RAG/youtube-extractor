@@ -49,30 +49,27 @@ public class YouTubeInternalService {
     @Transactional
     public List<Video> insertMissingVideos(
             ChannelDao channel,
-            List<com.google.api.services.youtube.model.Video> ytVideos,
-            Map<String, String> categoryIdToTitle) {
+            List<com.google.api.services.youtube.model.Video> ytVideos) {
         Set<String> existing = findExistingVideoIds(ytVideos.stream().map(com.google.api.services.youtube.model.Video::getId).collect(Collectors.toSet()));
 
         List<com.google.api.services.youtube.model.Video> toInsert = ytVideos.stream()
                 .filter(video -> !existing.contains(video.getId()))
                 .toList();
 
-        return upsertVideoDetails(channel, toInsert, categoryIdToTitle);
+        return upsertVideoDetails(channel, toInsert);
     }
 
     @Transactional
     public List<Video> upsertVideoDetails(
             ChannelDao channel,
-            List<com.google.api.services.youtube.model.Video> ytVideos,
-                                  Map<String, String> categoryIdToTitle) {
+            List<com.google.api.services.youtube.model.Video> ytVideos) {
         List<Video> databaseVideos = ytVideos.stream()
-                .map(video -> buildVideoDao(video, categoryIdToTitle, channel))
+                .map(video -> buildVideoDao(video, channel))
                 .toList();
         return videoRepository.saveAll(databaseVideos);
     }
 
-    private Video buildVideoDao(com.google.api.services.youtube.model.Video video,
-                                Map<String, String> categoryIdToTitle, ChannelDao channel) {
+    private Video buildVideoDao(com.google.api.services.youtube.model.Video video, ChannelDao channel) {
 
         Video videoDao = videoRepository.findByYoutubeVideoId(video.getId())
                 .orElseGet(Video::new);
@@ -85,8 +82,6 @@ public class YouTubeInternalService {
             videoDao.setTitle(sn.getTitle());
             videoDao.setDescription(sn.getDescription());
             videoDao.setDefaultLanguage(sn.getDefaultLanguage());
-            videoDao.setCategoryId(sn.getCategoryId());
-            videoDao.setCategoryTitle(sn.getCategoryId() == null ? null : categoryIdToTitle.get(sn.getCategoryId()));
 
             videoDao.setPublishedAt(sn.getPublishedAt() != null ? OffsetDateTime.parse(sn.getPublishedAt().toStringRfc3339()) : null);
 
@@ -120,5 +115,9 @@ public class YouTubeInternalService {
 
     public List<Video> findAllVideosForChannel(ChannelDao channel) {
         return videoRepository.findVideosByChannelDao(channel);
+    }
+
+    public List<String> fetchRegionsForLanguage(String language) {
+        return null;
     }
 }

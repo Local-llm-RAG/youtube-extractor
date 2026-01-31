@@ -2,8 +2,11 @@ package com.youtube.jpa.dao;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "video_transcripts")
@@ -18,8 +21,9 @@ public class VideoTranscript {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "video_id", nullable = false, unique = true)
+    // Many transcripts can belong to one video
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "video_id", nullable = false) // removed unique=true
     private Video video;
 
     @Column(name = "transcript_text", nullable = false, columnDefinition = "text")
@@ -27,6 +31,17 @@ public class VideoTranscript {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "category_id", columnDefinition = "text[]")
+    private List<String> categoryIds;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "category_title", columnDefinition = "text[]")
+    private List<String> categoryTitles;
+
+    @Column(name = "language")
+    private String language;
 
     @PrePersist
     void prePersist() {

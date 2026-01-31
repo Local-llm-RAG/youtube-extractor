@@ -59,8 +59,13 @@ public class YouTubeClientService {
         return result.stream().distinct().toList();
     }
 
-    public Map<String, String> fetchCategoryIdToTitle(String regionCode) throws Exception {
-        VideoCategoryListResponse resp = gateway.listVideoCategories(regionCode, CATEGORIES_RETURNED_FIELDS);
+    public Map<String, String> fetchCategoryIdToTitle(String regionCode) {
+        VideoCategoryListResponse resp = null;
+        try {
+            resp = gateway.listVideoCategories(regionCode, CATEGORIES_RETURNED_FIELDS);
+        } catch (Exception e) {
+            throw new RuntimeException("listVideoCategories call throws exception", e);
+        }
         return Optional.ofNullable(resp.getItems()).orElseGet(List::of).stream()
                 .collect(Collectors.toMap(VideoCategory::getId, c -> c.getSnippet().getTitle()));
     }

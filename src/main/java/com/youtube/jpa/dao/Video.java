@@ -3,6 +3,7 @@ package com.youtube.jpa.dao;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
@@ -29,8 +30,8 @@ public class Video {
   @Column(name = "transcript_passed", nullable = false)
   private boolean transcriptPassed;
 
-  @OneToOne(mappedBy = "video", fetch = FetchType.EAGER)
-  private VideoTranscript videoTranscript;
+  @OneToMany(mappedBy = "video", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<VideoTranscript> transcripts;
 
   // --- SNIPPET ---
   @Column(name = "title")
@@ -41,12 +42,6 @@ public class Video {
 
   @Column(name = "published_at")
   private OffsetDateTime publishedAt;
-
-  @Column(name = "category_id", length = 32)
-  private String categoryId;
-
-  @Column(name = "category_title", length = 128)
-  private String categoryTitle;
 
   @Column(name = "default_language", length = 32)
   private String defaultLanguage;
