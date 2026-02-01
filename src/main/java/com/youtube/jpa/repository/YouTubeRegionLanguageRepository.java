@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface YouTubeRegionLanguageRepository extends JpaRepository<YouTubeRegionLanguage, Long> {
     List<YouTubeRegionLanguage> findByRegionRegionIdOrderByPriorityAsc(String regionId);
+
+    List<YouTubeRegionLanguage> findByLanguageCode(String language);
 }

@@ -67,18 +67,19 @@ public class YouTubeChannelVideosService {
                                            List<String> desiredLanguages) {
         ChannelDao channel = youtubeInternalService.upsertChannelFromYouTube(ytChannel);
 
-        List<Video> insertedVideos = youtubeInternalService.insertMissingVideos(channel, allVideos);
+        List<Video> insertedVideos = youtubeInternalService.insertMissingVideos(channel, allVideos, categoryMap);
 
         // TODO: For minor optimization could upsert only videos that are already inserted. (ALL - inserted)
         // TODO: Also can combine in one function insert + upsert logic
-        youtubeInternalService.upsertVideoDetails(channel, allVideos);
+        youtubeInternalService.upsertVideoDetails(channel, allVideos, categoryMap);
 
         Long channelDbId = channel.getId();
 
         if (runTranscriptsSavingForAll) {
-            allVideos.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getId(), channelDbId, desiredLanguages, categoryMap)));
+            List<Video> allVideosFromDBWithCategories = youtubeInternalService.findAllVideosForChannelWithCategories(channel, categoryMap, allVideos);
+            allVideosFromDBWithCategories.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
         } else {
-            insertedVideos.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, categoryMap)));
+            insertedVideos.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
         }
 
         return allVideos.stream().map(com.google.api.services.youtube.model.Video::getId).toList();

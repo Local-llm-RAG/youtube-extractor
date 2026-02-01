@@ -61,8 +61,8 @@ public class VideoDiscoveredListener {
                                 transcriptRepository.save(VideoTranscript.builder()
                                         .video(video)
                                         .transcriptText(languageWithTranscript.getValue())
-                                        .categoryIds(event.categoryMap().get(languageWithTranscript.getKey()).keySet().stream().toList())
-                                        .categoryTitles(event.categoryMap().get(languageWithTranscript.getKey()).values().stream().toList())
+                                        .categoryIds(List.of(event.categoryMap().get(languageWithTranscript.getKey()).getKey()))
+                                        .categoryTitles(List.of(event.categoryMap().get(languageWithTranscript.getKey()).getValue()))
                                         .language(languageWithTranscript.getKey())
                                         .build());
                                 video.setTranscriptPassed(true);

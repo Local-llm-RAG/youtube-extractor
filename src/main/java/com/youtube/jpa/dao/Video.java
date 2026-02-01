@@ -7,7 +7,9 @@ import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "videos")
@@ -61,4 +63,8 @@ public class Video {
   @JdbcTypeCode(SqlTypes.ARRAY)
   @Column(name = "topic_categories", columnDefinition = "text[]")
   private List<String> topicCategories;
+
+
+  @Transient
+  private Map<String, Map.Entry<String, String>> categoriesEntry;
 }

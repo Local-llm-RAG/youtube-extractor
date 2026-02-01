@@ -25,7 +25,7 @@ public class RegionBootstrapService {
     public void importRegionsOnce() throws Exception {
         var regionsResponse = gateway.getAllRegions();
         var youtubeLangIds = gateway.getAllLanguages().getItems().stream()
-                .map(l -> l.getId())
+                .map(I18nLanguage::getId)
                 .collect(Collectors.toSet());
 
         Map<String, YouTubeRegion> existing = repo.findAllWithPreferredLanguages().stream()
@@ -81,10 +81,6 @@ public class RegionBootstrapService {
             if (tag != null && youtubeLangIds.contains(tag)) {
                 result.add(tag);
             }
-        }
-
-        if (youtubeLangIds.contains("en")) {
-            result.add("en");
         }
 
         if (result.isEmpty()) {
