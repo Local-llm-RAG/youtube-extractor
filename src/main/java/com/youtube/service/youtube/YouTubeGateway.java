@@ -25,7 +25,13 @@ public class YouTubeGateway {
                 .setKey(apiKey)
                 .execute();
     }
-
+    public ChannelListResponse listChannelsById(String channelId) throws Exception {
+        return youtube.channels()
+                .list(List.of("id", "contentDetails", "snippet"))
+                .setId(List.of(channelId))
+                .setKey(apiKey)
+                .execute();
+    }
     public PlaylistItemListResponse listPlaylistItemsPage(String playlistId, String pageToken, long maxResults) throws Exception {
         return youtube.playlistItems()
                 .list(List.of("contentDetails"))

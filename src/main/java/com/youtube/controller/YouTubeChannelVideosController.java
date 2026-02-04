@@ -21,8 +21,19 @@ public class YouTubeChannelVideosController {
     public ResponseEntity<List<String>> getVideoIds(
             @RequestParam String handle,
             @RequestParam Boolean runTranscriptsSavingForAll,
+            @RequestParam List<String> desiredLanguages,
+            @RequestParam Boolean retryOnlyThoseWithoutTranscripts
+    ) throws Exception {
+        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle, runTranscriptsSavingForAll, desiredLanguages, retryOnlyThoseWithoutTranscripts));
+    }
+
+    @Operation(summary = "Get video by url")
+    @GetMapping("/video")
+    public ResponseEntity<Void> getVideoByUrl(
+            @RequestParam String videoUrl,
             @RequestParam List<String> desiredLanguages
-            ) throws Exception {
-        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle, runTranscriptsSavingForAll, desiredLanguages));
+    ) throws Exception {
+        service.fetchAndSaveVideoByUrl(videoUrl, desiredLanguages);
+        return ResponseEntity.accepted().build();
     }
 }

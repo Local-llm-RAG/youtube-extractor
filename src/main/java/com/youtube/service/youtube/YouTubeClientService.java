@@ -16,28 +16,23 @@ public class YouTubeClientService {
     public static final List<String> CATEGORIES_RETURNED_FIELDS = List.of("snippet");
     private final YouTubeGateway gateway;
 
-    public String normalizeHandle(String link) {
-        if (link == null || link.isBlank()) {
-            throw new IllegalArgumentException("Handle is required");
-        }
-
-        String h = link.trim();
-        int at = h.indexOf("@");
-        if (at >= 0) h = h.substring(at);
-        if (!h.startsWith("@")) h = "@" + h;
-        return h;
-    }
-
-    public Channel fetchChannelByChannelUrl(String handle) throws Exception {
-        String normalizedHandle = normalizeHandle(handle);
-        ChannelListResponse resp = gateway.listChannelsByHandle(normalizedHandle);
+    public Channel fetchChannelByChannelHandle(String channelId) throws Exception {
+        ChannelListResponse resp = gateway.listChannelsByHandle(channelId);
 
         return Optional.ofNullable(resp.getItems())
                 .filter(items -> !items.isEmpty())
                 .map(List::getFirst)
-                .orElseThrow(() -> new IllegalArgumentException("No channel found for handle: " + normalizedHandle));
+                .orElseThrow(() -> new IllegalArgumentException("No channel found for handle: " + channelId));
     }
 
+    public Channel fetchChannelByChannelId(String channelId) throws Exception {
+        ChannelListResponse resp = gateway.listChannelsById(channelId);
+
+        return Optional.ofNullable(resp.getItems())
+                .filter(items -> !items.isEmpty())
+                .map(List::getFirst)
+                .orElseThrow(() -> new IllegalArgumentException("No channel found for handle: " + channelId));
+    }
     public List<String> fetchAllUniqueVideoIdsFromPlaylist(String playlistId) throws Exception {
         List<String> result = new ArrayList<>();
         String pageToken = null;

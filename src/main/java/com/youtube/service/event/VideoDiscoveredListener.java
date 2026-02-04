@@ -46,7 +46,15 @@ public class VideoDiscoveredListener {
 
         try {
             event.desiredLanguages().stream()
-                    .map(language -> transcriptClient.transcript(youtubeVideoId, List.of(language)))
+                    .map(language -> {
+                        try {
+                            return transcriptClient.transcript(youtubeVideoId, List.of(language));
+                        } catch (Exception ex) {
+                            log.error("Cannot find transcripts for video {} for language {}", youtubeVideoId, language, ex);
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
                     .map(resp -> new AbstractMap.SimpleEntry<>(resp.language(), resp.text()))
                     .filter(map -> {
                         if (Objects.nonNull(map.getValue()) || !map.getValue().isEmpty()) {
