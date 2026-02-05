@@ -68,6 +68,10 @@ springdoc:
   swagger-ui:
     path: /swagger
 
+application:
+  gpt:
+    key: ${GPT_API_KEY}
+
 resilience4j:
   circuitbreaker:
     instances:

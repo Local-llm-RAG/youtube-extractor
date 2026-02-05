@@ -41,7 +41,7 @@ dependencies {
     implementation("com.google.http-client:google-http-client-jackson2:2.0.3")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
-
+    implementation("com.openai:openai-java:4.17.0")
 
     implementation 'io.qdrant:client:1.16.2'
 
