@@ -72,6 +72,9 @@ application:
   gpt:
     key: ${GPT_API_KEY}
 
+arxiv:
+  searchUrL: https://export.arxiv.org/api/query?search_query=
+
 resilience4j:
   circuitbreaker:
     instances:

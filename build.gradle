@@ -42,6 +42,7 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
     implementation("com.openai:openai-java:4.17.0")
+    implementation ('com.rometools:rome:2.1.0')
 
     implementation 'io.qdrant:client:1.16.2'
 
