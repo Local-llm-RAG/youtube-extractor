@@ -32,9 +32,10 @@ public class YouTubeGateway {
                 .setKey(apiKey)
                 .execute();
     }
-    public PlaylistItemListResponse listPlaylistItemsPage(String playlistId, String pageToken, long maxResults) throws Exception {
+
+    public PlaylistItemListResponse listPlaylistItemsPage(String playlistId, String pageToken, long maxResults, List<String> parts) throws Exception {
         return youtube.playlistItems()
-                .list(List.of("contentDetails"))
+                .list(parts)
                 .setPlaylistId(playlistId)
                 .setMaxResults(maxResults)
                 .setPageToken(pageToken)

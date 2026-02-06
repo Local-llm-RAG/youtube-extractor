@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -22,9 +23,17 @@ public class YouTubeChannelVideosController {
             @RequestParam String handle,
             @RequestParam Boolean runTranscriptsSavingForAll,
             @RequestParam List<String> desiredLanguages,
-            @RequestParam Boolean retryOnlyThoseWithoutTranscripts
+            @RequestParam Boolean retryOnlyThoseWithoutTranscripts,
+            @RequestParam Instant optionalStartDate,
+            @RequestParam Instant optionalEndDate
     ) throws Exception {
-        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(handle, runTranscriptsSavingForAll, desiredLanguages, retryOnlyThoseWithoutTranscripts));
+        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(
+                handle,
+                runTranscriptsSavingForAll,
+                desiredLanguages,
+                retryOnlyThoseWithoutTranscripts,
+                optionalStartDate,
+                optionalEndDate));
     }
 
     @Operation(summary = "Get video by url")

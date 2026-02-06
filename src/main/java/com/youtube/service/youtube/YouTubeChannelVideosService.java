@@ -11,6 +11,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -31,17 +32,19 @@ public class YouTubeChannelVideosService {
             String fullChannelUrl,
             Boolean runTranscriptsSavingForAll,
             List<String> desiredLanguages,
-            Boolean retryOnlyThoseWithoutTranscripts) throws Exception {
+            Boolean retryOnlyThoseWithoutTranscripts,
+            Instant optionalStartDate,
+            Instant optionalEndDate
+    ) throws Exception {
         Channel ytChannel = youtubeClientService.fetchChannelByChannelHandle(normalizeHandle(fullChannelUrl));
         String uploadsPlaylistId = ytChannel.getContentDetails()
                 .getRelatedPlaylists()
                 .getUploads();
         log.info("Collected channel with url {} with upload playlist id {}", fullChannelUrl, uploadsPlaylistId);
         List<String> uniqueVideoIds = youtubeClientService
-                .fetchAllUniqueVideoIdsFromPlaylist(uploadsPlaylistId);
+                .fetchUniqueVideoIdsFromUploadsPlaylist(uploadsPlaylistId, optionalStartDate, optionalEndDate);
 
         log.info("Unique video ids {}", uniqueVideoIds);
-        // TODO: when import other channels this should not be hardcoded
         Map<String, Map<String, String>> categoryTitlesByLanguage = categoriesPerLanguage(desiredLanguages);
         if (uniqueVideoIds.isEmpty()) {
             log.info("No videos for channel collected");
@@ -81,7 +84,7 @@ public class YouTubeChannelVideosService {
             youtubeInternalService.findAllVideosForChannelWithCategories(channel, categoryMap, allVideos)
                     .stream()
                     .filter(video -> !video.isTranscriptPassed())
-                    .forEach(video ->publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
+                    .forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
         }
         if (runTranscriptsSavingForAll) {
             List<Video> allVideosFromDBWithCategories = youtubeInternalService.findAllVideosForChannelWithCategories(channel, categoryMap, allVideos);

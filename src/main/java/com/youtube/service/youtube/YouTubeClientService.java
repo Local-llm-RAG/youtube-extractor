@@ -4,7 +4,9 @@ import com.google.api.services.youtube.model.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
@@ -12,6 +14,7 @@ import java.util.stream.Collectors;
 public class YouTubeClientService {
 
     public static final List<String> VIDEO_RETURNED_FIELDS = List.of("snippet", "statistics", "status", "topicDetails");
+    public static final List<String> PLAYLIST_RETURNED_FIELDS = List.of("snippet", "contentDetails");
     public static final int BATCH_SIZE = 50;
     public static final List<String> CATEGORIES_RETURNED_FIELDS = List.of("snippet");
     private final YouTubeGateway gateway;
@@ -33,23 +36,54 @@ public class YouTubeClientService {
                 .map(List::getFirst)
                 .orElseThrow(() -> new IllegalArgumentException("No channel found for handle: " + channelId));
     }
-    public List<String> fetchAllUniqueVideoIdsFromPlaylist(String playlistId) throws Exception {
+
+    public List<String> fetchUniqueVideoIdsFromUploadsPlaylist(
+            String uploadsPlaylistId,
+            Instant startInclusive,
+            Instant endExclusive
+    ) throws Exception {
+
+        Objects.requireNonNull(uploadsPlaylistId, "uploadsPlaylistId");
+
         List<String> result = new ArrayList<>();
         String pageToken = null;
+        AtomicBoolean stop = new AtomicBoolean(false);
 
         do {
-            PlaylistItemListResponse plResp = gateway.listPlaylistItemsPage(playlistId, pageToken, BATCH_SIZE);
+            PlaylistItemListResponse plResp =
+                    gateway.listPlaylistItemsPage(uploadsPlaylistId, pageToken, BATCH_SIZE, PLAYLIST_RETURNED_FIELDS);
 
-            Optional.ofNullable(plResp.getItems()).orElseGet(List::of).stream()
+            Optional.ofNullable(plResp.getItems()).
+                    orElseGet(List::of)
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .peek(item -> {
+                        if (startInclusive == null) return;
+
+                        PlaylistItemSnippet snippet = item.getSnippet();
+                        if (snippet == null || snippet.getPublishedAt() == null) return;
+
+                        Instant publishedAt = Instant.ofEpochMilli(snippet.getPublishedAt().getValue());
+                        if (publishedAt.isBefore(startInclusive)) {
+                            stop.set(true);
+                        }
+                    })
+                    .takeWhile(_ -> !stop.get())
+                    .filter(item -> item.getSnippet() != null && item.getSnippet().getPublishedAt() != null)
+                    .filter(item -> {
+                        Instant publishedAt = Instant.ofEpochMilli(item.getSnippet().getPublishedAt().getValue());
+                        if (startInclusive != null && publishedAt.isBefore(startInclusive)) return false;
+                        if (endExclusive != null && publishedAt.isAfter(endExclusive)) return false;
+                        return true;
+                    })
                     .map(PlaylistItem::getContentDetails)
                     .filter(Objects::nonNull)
                     .map(PlaylistItemContentDetails::getVideoId)
                     .filter(Objects::nonNull)
                     .filter(id -> !id.isBlank())
                     .forEach(result::add);
-
             pageToken = plResp.getNextPageToken();
-        } while (pageToken != null && !pageToken.isBlank());
+        } while (!stop.get() && pageToken != null && !pageToken.isBlank());
 
         return result.stream().distinct().toList();
     }
