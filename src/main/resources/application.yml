@@ -68,9 +68,8 @@ springdoc:
   swagger-ui:
     path: /swagger
 
-application:
-  gpt:
-    key: ${GPT_API_KEY}
+gpt:
+  key: ${GPT_API_KEY}
 
 arxiv:
   searchUrL: https://export.arxiv.org/api/query?search_query=
