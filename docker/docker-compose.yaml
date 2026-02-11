@@ -24,5 +24,27 @@ services:
       timeout: 3s
       retries: 5
 
+  grobid:
+    image: grobid/grobid:0.8.2-crf
+    container_name: grobid
+    restart: unless-stopped
+
+    ports:
+      - "8070:8070"
+      - "8071:8071"
+
+    environment:
+      JAVA_OPTS: >
+        -Xms2g
+        -Xmx2g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8071/api/isalive"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
 volumes:
   qdrant_storage:

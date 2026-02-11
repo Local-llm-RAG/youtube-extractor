@@ -44,6 +44,7 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
     implementation("com.openai:openai-java:4.17.0")
     implementation ('com.rometools:rome:2.1.0')
+    implementation("org.jsoup:jsoup:1.17.2")
 
     implementation 'io.qdrant:client:1.16.2'
 

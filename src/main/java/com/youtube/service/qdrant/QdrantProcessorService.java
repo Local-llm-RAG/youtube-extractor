@@ -29,6 +29,11 @@ public class QdrantProcessorService implements Job {
     private final EmbeddingProperties embeddingProperties;
 
     @Override
+    public String getName() {
+        return "QdrantProcessorService Job";
+    }
+
+    @Override
     public void execute(JobExecution execution) {
 //        youTubeInternalService.findAllChannels()
 //                .stream()
