@@ -14,7 +14,7 @@ public final class GrobidTeiMapperJsoup {
 
     public static ArxivPaperDocument toArxivPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
         if (teiXml == null || teiXml.isBlank()) {
-            return new ArxivPaperDocument(arxivId, oaiIdentifier, null, List.of(), null,
+            return new ArxivPaperDocument(arxivId, oaiIdentifier, null, null,
                     List.of(new Section("BODY", 1, "")), teiXml);
         }
 
@@ -23,14 +23,6 @@ public final class GrobidTeiMapperJsoup {
         //here title is handled, depending on different grobid versions
         String title = firstText(tei, "teiHeader titleStmt > title");
         if (isBlank(title)) title = firstText(tei, "teiHeader sourceDesc biblStruct analytic title");
-
-        //here authors are handled, depending on different grobid versions and their output
-        List<String> authors = tei.select("teiHeader sourceDesc biblStruct analytic author persName")
-                .stream()
-                .map(GrobidTeiMapperJsoup::extractAuthorName)
-                .filter(s -> !s.isBlank())
-                .distinct()
-                .toList();
 
         //Normalize because grobid include line breaks
         String abstractText = normalizeWs(firstText(tei, "teiHeader profileDesc abstract"));
@@ -46,35 +38,9 @@ public final class GrobidTeiMapperJsoup {
                 arxivId,
                 oaiIdentifier,
                 title,
-                authors,
                 abstractText,
                 sections,
                 teiXml);
-    }
-
-    private static String extractAuthorName(Element persName) {
-        if (persName == null) return "";
-
-        List<String> parts = new ArrayList<>();
-
-        // Forenames (can be multiple)
-        persName.select("forename").forEach(fn -> {
-            String t = normalizeWs(fn.text());
-            if (!t.isBlank()) parts.add(t);
-        });
-
-        // Surname
-        String surname = normalizeWs(persName.selectFirst("surname") != null
-                ? persName.selectFirst("surname").text()
-                : "");
-        if (!surname.isBlank()) parts.add(surname);
-
-        // Fallback if structure is weird
-        if (parts.isEmpty()) {
-            return normalizeWs(persName.text());
-        }
-
-        return String.join(" ", parts);
     }
 
     private static List<Section> extractSections(Document tei) {

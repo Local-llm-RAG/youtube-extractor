@@ -1,4 +1,4 @@
-package com.youtube.jpa.dao;
+package com.youtube.jpa.dao.arxiv;
 
 import jakarta.persistence.*;
 import lombok.*;

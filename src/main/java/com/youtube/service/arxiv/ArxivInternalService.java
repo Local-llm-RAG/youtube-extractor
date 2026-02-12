@@ -1,6 +1,11 @@
 package com.youtube.service.arxiv;
 
-import com.youtube.jpa.dao.ArxivTracker;
+import com.youtube.external.rest.arxiv.dto.ArxivRecord;
+import com.youtube.external.rest.arxiv.dto.Section;
+import com.youtube.jpa.dao.arxiv.*;
+import com.youtube.jpa.repository.ArxivAuthorRepository;
+import com.youtube.jpa.repository.ArxivPaperDocumentRepository;
+import com.youtube.jpa.repository.ArxivRecordRepository;
 import com.youtube.jpa.repository.ArxivTrackerRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -8,13 +13,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArxivInternalService {
     private final ArxivTrackerRepository arxivTrackerRepository;
+    private final ArxivRecordRepository arxivRecordRepository;
+    private final ArxivAuthorRepository arxivAuthorRepository;
+    private final ArxivPaperDocumentRepository arxivPaperDocumentRepository;
 
     public ArxivTracker getArchiveTracker() {
         return arxivTrackerRepository.findTopByOrderByDateEndDesc()
@@ -41,7 +53,67 @@ public class ArxivInternalService {
     }
 
     @Transactional
-    public void saveTracker(ArxivTracker arxivTracker) {
-        arxivTrackerRepository.save(arxivTracker);
+    public void persistArxivState(ArxivTracker tracker, ArxivRecord r) {
+        arxivTrackerRepository.save(tracker);
+
+        var record = ArxivRecordEntity.builder()
+                .arxivId(r.getArxivId())
+                .oaiIdentifier(r.getOaiIdentifier())
+                .datestamp(r.getDatestamp() == null ? null : LocalDate.parse(r.getDatestamp()))
+                .title(r.getTitle())
+                .abstractText(r.getAbstractText())
+                .comments(r.getComments())
+                .journalRef(r.getJournalRef())
+                .doi(r.getDoi())
+                .license(r.getLicense())
+                .categories(new ArrayList<>())
+                .authors(new ArrayList<>())
+                .build();
+        record.getCategories().addAll(r.getCategories());
+        IntStream.range(0, r.getAuthors().size())
+                .forEach(i -> {
+                    var a = r.getAuthors().get(i);
+
+                    record.addAuthor(
+                            ArxivAuthorEntity.builder()
+                                    .firstName(a.getFirstName())
+                                    .lastName(a.getLastName())
+                                    .pos(i)
+                                    .build()
+                    );
+                });
+
+        if (r.getDocument() != null) {
+            var doc = ArxivPaperDocumentEntity.builder()
+                    .title(r.getDocument().title())
+                    .abstractText(r.getDocument().abstractText())
+                    .teiXmlRaw(r.getDocument().teiXmlRaw())
+                    .sections(new ArrayList<>())
+                    .build();
+
+            List<Section> sections = r.getDocument().sections();
+
+            for (int i = 0; i < sections.size(); i++) {
+                var s = sections.get(i);
+
+                doc.addSection(
+                        ArxivSectionEntity.builder()
+                                .title(s.title())
+                                .level(s.level())
+                                .text(s.text())
+                                .pos(i)
+                                .build()
+                );
+            }
+            record.setDocument(doc);
+        }
+        arxivRecordRepository.save(record);
+    }
+
+    public List<String> findArxivIdsProcessedInPeriod(OffsetDateTime dateStart, OffsetDateTime dateEnd) {
+        return arxivRecordRepository.findArxivIdsProcessedInPeriod(
+                dateStart,
+                dateEnd
+        );
     }
 }

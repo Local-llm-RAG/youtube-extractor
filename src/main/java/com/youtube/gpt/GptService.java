@@ -1,8 +1,7 @@
 package com.youtube.gpt;
 
 import com.youtube.jpa.dao.Video;
-import com.youtube.jpa.dao.VideoTranscript;
-import com.youtube.jpa.repository.ArchiveRepository;
+import com.youtube.jpa.repository.ArxivRepository;
 import com.youtube.jpa.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +15,7 @@ import java.util.stream.Stream;
 public class GptService {
     private final GPTClient gptClient;
     private final VideoRepository videoRepository;
-    private final ArchiveRepository archiveRepository;
+    private final ArxivRepository arxivRepository;
 
     public CostEstimate findAndEstimateResourceTransformationCost(
             Map<String, String> multilingualSystemPrompt,
