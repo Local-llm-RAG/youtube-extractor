@@ -1,16 +1,14 @@
-package com.youtube.service.qdrant;
+package com.youtube.service.batch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.job.JobExecutionException;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.AbstractMap;
 import java.util.List;
 
 @Component

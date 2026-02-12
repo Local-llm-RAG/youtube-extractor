@@ -1,76 +1,60 @@
-package com.youtube.external.rest.arxiv;
+package com.youtube.service.arxiv;
 
 import com.youtube.config.ArxivOaiProps;
+import com.youtube.external.rest.arxiv.ArxivClient;
 import com.youtube.external.rest.arxiv.dto.ArxivAuthor;
 import com.youtube.external.rest.arxiv.dto.ArxivRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.events.XMLEvent;
 import java.io.ByteArrayInputStream;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
-public class ArxivOaiSimpleClient {
+public class ArxivOaiService {
     private final ArxivOaiProps props;
-    private final RestClient rest;
+    private final ArxivClient arxivClient;
 
-    // IMPORTANT: make namespace handling predictable for arXiv default namespaces
     private final XMLInputFactory xml = newXmlFactory();
 
-    private static XMLInputFactory newXmlFactory() {
-        XMLInputFactory f = XMLInputFactory.newFactory();
-        try {
-            f.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
-        } catch (IllegalArgumentException ignored) {
-            // Some StAX impls may not support toggling; safe to ignore.
-        }
-        return f;
-    }
-
-    public List<ArxivRecord> listRecords(String from, String until) {
-        List<ArxivRecord> out = new ArrayList<>();
+    public List<ArxivRecord> getArxivPapersMetadata(String from, String until) {
+        List<ArxivRecord> collectedRecords = new ArrayList<>();
         String token = null;
 
         do {
-            URI uri = buildUri(from, until, token);
-
-            byte[] body = rest.get()
-                    .uri(uri)
-                    .retrieve()
-                    .body(byte[].class);
+            byte[] body = arxivClient.listRecords(props.baseUrl(), from, until, token);
 
             Page page = parse(body);
-            out.addAll(page.records);
+            collectedRecords.addAll(page.records);
             token = page.resumptionToken;
 
         } while (token != null && !token.isBlank());
 
-        return out;
+        return collectedRecords;
     }
 
-    private URI buildUri(String from, String until, String token) {
-        UriComponentsBuilder b = UriComponentsBuilder
-                .fromUriString(props.baseUrl())
-                .queryParam("verb", "ListRecords");
+    public byte[] getPdf(String arxivId) {
+        return arxivClient.getPdf(arxivId);
+    }
 
-        if (token == null) {
-            b.queryParam("metadataPrefix", "arXiv")
-                    .queryParam("from", from)
-                    .queryParam("until", until);
-        } else {
-            b.queryParam("resumptionToken", token);
+    public byte[] getEText(String arxivId) {
+        return arxivClient.getEText(arxivId);
+    }
+
+    private static XMLInputFactory newXmlFactory() {
+        XMLInputFactory f = XMLInputFactory.newFactory();
+        try {
+            // Make namespace handling predictable for arXiv default namespaces
+            f.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
+        } catch (IllegalArgumentException ignored) {
         }
-
-        return b.build(true).toUri();
+        return f;
     }
 
     private Page parse(byte[] xmlBytes) {
@@ -106,8 +90,6 @@ public class ArxivOaiSimpleClient {
                         }
                         case "author" -> {
                             if (inMetadata && cur != null) cur.getAuthors().add(new ArxivAuthor());
-                        }
-                        default -> {
                         }
                     }
                 }
@@ -194,16 +176,6 @@ public class ArxivOaiSimpleClient {
                 || l.equals("https://creativecommons.org/licenses/by-sa/4.0/")
                 || l.equals("https://creativecommons.org/licenses/by-nd/4.0/") // only if you decide ND is acceptable
                 || l.equals("https://creativecommons.org/publicdomain/zero/1.0/");
-    }
-
-    public byte[] getPdf(String arxivId) {
-        URI pdfUri = URI.create("https://arxiv.org/pdf/" + arxivId + ".pdf");
-        return rest.get().uri(pdfUri).retrieve().body(byte[].class);
-    }
-
-    public byte[] getEText(String arxivId) {
-        URI srcUri = URI.create("https://arxiv.org/e-print/" + arxivId);
-        return rest.get().uri(srcUri).retrieve().body(byte[].class);
     }
 
     private record Page(List<ArxivRecord> records, String resumptionToken) {

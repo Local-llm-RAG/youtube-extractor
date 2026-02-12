@@ -1,6 +1,6 @@
-package com.youtube.service.qdrant;
+package com.youtube.service.grobid;
 
-import com.youtube.external.rest.arxiv.dto.PaperDocument;
+import com.youtube.external.rest.arxiv.dto.ArxivPaperDocument;
 import com.youtube.external.rest.arxiv.dto.Section;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -12,9 +12,9 @@ import java.util.stream.Collectors;
 
 public final class GrobidTeiMapperJsoup {
 
-    public static PaperDocument toPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
+    public static ArxivPaperDocument toArxivPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
         if (teiXml == null || teiXml.isBlank()) {
-            return new PaperDocument(arxivId, oaiIdentifier, null, List.of(), null,
+            return new ArxivPaperDocument(arxivId, oaiIdentifier, null, List.of(), null,
                     List.of(new Section("BODY", 1, "")), teiXml);
         }
 
@@ -42,7 +42,7 @@ public final class GrobidTeiMapperJsoup {
             sections = List.of(new Section("BODY", 1, bodyText));
         }
 
-        return new PaperDocument(
+        return new ArxivPaperDocument(
                 arxivId,
                 oaiIdentifier,
                 title,

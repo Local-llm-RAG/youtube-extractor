@@ -20,8 +20,16 @@ public class ArxivRecord {
 
     // new
     private String arxivId;
-    private PaperDocument document;
+    private ArxivPaperDocument document;
+
     public ArxivAuthor lastAuthor() {
-        return authors.get(authors.size() - 1);
+        return authors.getLast();
+    }
+
+    public static String extractArxivIdFromOai(String oaiIdentifier) {
+        if (oaiIdentifier == null) return null;
+        int idx = oaiIdentifier.lastIndexOf(':');
+        String id = (idx >= 0) ? oaiIdentifier.substring(idx + 1) : oaiIdentifier;
+        return id.replaceAll("v\\d+$", "");
     }
 }

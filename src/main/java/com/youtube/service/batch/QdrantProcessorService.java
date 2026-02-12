@@ -1,22 +1,16 @@
-package com.youtube.service.qdrant;
+package com.youtube.service.batch;
 
 import com.youtube.config.EmbeddingProperties;
 import com.youtube.external.rest.pythonclient.RagSystemRestApiClient;
 import com.youtube.external.rest.qdrant.QdrantGrpsClient;
-import com.youtube.external.webflux.RagSystemWebFluxClient;
 import com.youtube.external.rest.pythonclient.dto.EmbedTranscriptRequest;
 import com.youtube.external.rest.pythonclient.dto.EmbeddingTask;
-import com.youtube.jpa.dao.Video;
 import com.youtube.service.youtube.YouTubeInternalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.stereotype.Component;
-
-import java.util.AbstractMap;
-import java.util.List;
-import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
