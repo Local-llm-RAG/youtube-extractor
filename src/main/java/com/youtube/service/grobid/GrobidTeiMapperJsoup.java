@@ -12,6 +12,25 @@ import java.util.stream.Collectors;
 
 public final class GrobidTeiMapperJsoup {
 
+    public static String teiToPlainText(String teiXml) {
+        if (teiXml == null || teiXml.isBlank()) return null;
+        Document doc = Jsoup.parse(teiXml, "", Parser.xmlParser());
+        Element textRoot = doc.selectFirst("TEI > text");
+        Element root = (textRoot != null) ? textRoot : doc;
+        StringBuilder out = new StringBuilder(teiXml.length());
+        for (Element el : root.select("head, p, formula, item, label")) {
+            String t = normalize(el.text());
+            if (!t.isEmpty()) {
+                if (!out.isEmpty()) out.append('\n').append('\n');
+                out.append(t);
+            }
+        }
+        if (out.isEmpty()) {
+            out.append(normalize(root.text()));
+        }
+        return out.toString().trim();
+    }
+
     public static ArxivPaperDocument toArxivPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
         if (teiXml == null || teiXml.isBlank()) {
             return new ArxivPaperDocument(arxivId, oaiIdentifier, null, null,
@@ -41,6 +60,12 @@ public final class GrobidTeiMapperJsoup {
                 abstractText,
                 sections,
                 teiXml);
+    }
+
+    private static String normalize(String s) {
+        if (s == null) return "";
+        // Jsoup already decodes XML entities; just normalize whitespace.
+        return s.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
     }
 
     private static List<Section> extractSections(Document tei) {

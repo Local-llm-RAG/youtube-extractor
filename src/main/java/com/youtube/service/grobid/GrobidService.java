@@ -20,19 +20,17 @@ public class GrobidService {
     private static final Pattern TAGS = Pattern.compile("<[^>]+>");
 
     public ArxivPaperDocument processGrobidDocument(String arxivId, String oaiIdentifier, byte[] pdfBytes) {
+        long t0 = System.nanoTime();
         String xmlString = grobidClient.processPdfToXmlString(arxivId, pdfBytes, props.baseUrl(), props.fulltextEndpoint());
-        log.info("Collected document for paper with id {}", oaiIdentifier);
-        return GrobidTeiMapperJsoup.toArxivPaperDocument(arxivId, oaiIdentifier, xmlString);
-    }
+        long t1 = System.nanoTime();
+        ArxivPaperDocument doc = GrobidTeiMapperJsoup.toArxivPaperDocument(arxivId, oaiIdentifier, xmlString);
+        long t2 = System.nanoTime();
 
-    public String teiToPlainText(String teiXml) {
-        if (teiXml == null || teiXml.isBlank()) return null;
-        String noTags = TAGS.matcher(teiXml).replaceAll(" ");
-        noTags = noTags.replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&amp;", "&")
-                .replace("&quot;", "\"")
-                .replace("&apos;", "'");
-        return noTags.replaceAll("\\s+", " ").trim();
+        log.info("GROBID {} ms | Mapping {} ms | total {} ms | id={}",
+                (t1 - t0) / 1_000_000,
+                (t2 - t1) / 1_000_000,
+                (t2 - t0) / 1_000_000,
+                oaiIdentifier);
+        return doc;
     }
 }

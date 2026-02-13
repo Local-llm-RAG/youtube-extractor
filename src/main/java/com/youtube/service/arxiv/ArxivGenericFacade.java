@@ -3,15 +3,17 @@ package com.youtube.service.arxiv;
 import com.youtube.external.rest.arxiv.dto.ArxivRecord;
 import com.youtube.external.rest.arxiv.dto.ArxivPaperDocument;
 import com.youtube.jpa.dao.arxiv.ArxivTracker;
-import com.youtube.jpa.repository.ArxivPaperDocumentRepository;
 import com.youtube.service.grobid.GrobidService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -20,7 +22,12 @@ public class ArxivGenericFacade {
     private final ArxivOaiService arxivOaiService;
     private final GrobidService grobidService;
     private final ArxivInternalService arxivInternalService;
-
+    private final ExecutorService grobidPool = Executors.newFixedThreadPool(2, r -> {
+                Thread t = new Thread(r);
+                t.setName("grobid-worker-" + t.getId());
+                t.setDaemon(true);
+                return t;
+            });
     public ArxivTracker getArxivTracker() {
         return arxivInternalService.getArchiveTracker();
     }
@@ -29,8 +36,8 @@ public class ArxivGenericFacade {
         if (!arxivTracker.getAllPapersForPeriod().equals(arxivTracker.getProcessedPapersForPeriod())) {
             Set<String> processedArxivIds = new java.util.HashSet<>(
                     arxivInternalService.findArxivIdsProcessedInPeriod(
-                            arxivTracker.getDateStart().atStartOfDay().atOffset(ZoneOffset.UTC),
-                            arxivTracker.getDateEnd().atStartOfDay().atOffset(ZoneOffset.UTC)
+                            arxivTracker.getDateStart(),
+                            arxivTracker.getDateEnd()
                     )
             );
             List<ArxivRecord> recs = arxivOaiService.getArxivPapersMetadata(
@@ -44,9 +51,12 @@ public class ArxivGenericFacade {
                     .filter(r -> !processedArxivIds.contains(r.getArxivId()))
                     .toList();
 
-            for (ArxivRecord r : unprocessed) {
-                processOne(arxivTracker, r);
-            }
+            AtomicInteger processed = new AtomicInteger(arxivTracker.getProcessedPapersForPeriod());
+
+            List<CompletableFuture<Void>> futures = unprocessed.stream()
+                    .map(r -> CompletableFuture.runAsync(() -> processOne(arxivTracker, r, processed), grobidPool))
+                    .toList();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
             log.info("Resumed: processed {} remaining records (out of {} total) for period",
                     unprocessed.size(), recs.size());
@@ -59,15 +69,17 @@ public class ArxivGenericFacade {
 
         arxivTracker.setAllPapersForPeriod(recs.size());
 
-        for (ArxivRecord r : recs) {
-            r.setArxivId(ArxivRecord.extractArxivIdFromOai(r.getOaiIdentifier()));
-            if (r.getArxivId() == null) continue;
-            processOne(arxivTracker, r);
-        }
+        AtomicInteger processed = new AtomicInteger(arxivTracker.getProcessedPapersForPeriod());
+
+        List<CompletableFuture<Void>> futures = recs.stream()
+                .map(r -> CompletableFuture.runAsync(() -> processOne(arxivTracker, r, processed), grobidPool))
+                .toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
         log.info("Processed {} records with GROBID", recs.size());
     }
 
-    private void processOne(ArxivTracker arxivTracker, ArxivRecord r) {
+    private void processOne(ArxivTracker arxivTracker, ArxivRecord r, AtomicInteger processed) {
         String arxivId = r.getArxivId();
 
         try {
@@ -83,7 +95,8 @@ public class ArxivGenericFacade {
         } catch (Exception e) {
             log.warn("Failed to process arXivId={} with GROBID", arxivId, e);
         } finally {
-            arxivTracker.setProcessedPapersForPeriod(arxivTracker.getProcessedPapersForPeriod() + 1);
+            int newVal = processed.incrementAndGet();
+            arxivTracker.setProcessedPapersForPeriod(newVal);
             arxivInternalService.persistArxivState(arxivTracker, r);
         }
     }

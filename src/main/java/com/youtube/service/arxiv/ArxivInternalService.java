@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -110,7 +109,7 @@ public class ArxivInternalService {
         arxivRecordRepository.save(record);
     }
 
-    public List<String> findArxivIdsProcessedInPeriod(OffsetDateTime dateStart, OffsetDateTime dateEnd) {
+    public List<String> findArxivIdsProcessedInPeriod(LocalDate dateStart, LocalDate dateEnd) {
         return arxivRecordRepository.findArxivIdsProcessedInPeriod(
                 dateStart,
                 dateEnd
