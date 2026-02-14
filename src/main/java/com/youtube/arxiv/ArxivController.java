@@ -15,15 +15,15 @@ import static org.springframework.http.HttpStatus.OK;
 public class ArxivController {
     private final ArxivService arxivService;
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     @ResponseStatus(OK)
-    public List<ArxivPaper> search(
-            @RequestParam String query,
-            @RequestParam(defaultValue = "0") int start,
-            @RequestParam(defaultValue = "10") int limit
-    ) {
-        log.info("GET /api/arxiv/search?query={}&start={}&limit={}", query, start, limit);
+    public List<ArxivPaper> search(@RequestBody ArxivSearchRequest request) {
+        log.info("GET /api/arxiv/search - start={} limit={}", request.getStart(), request.getLimit());
 
-        return arxivService.search(query, start, limit);
+        if (0 == request.getLimit()) {
+            throw new IllegalArgumentException("limit must not be less than 1");
+        }
+
+        return arxivService.search(request);
     }
 }

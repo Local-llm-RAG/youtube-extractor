@@ -74,7 +74,7 @@ gpt:
   key: ${GPT_API_KEY}
 
 arxiv:
-  searchUrL: https://export.arxiv.org/api/query?search_query=
+  searchUrl: https://export.arxiv.org/api/query?search_query=
   oai:
     base-url: "https://export.arxiv.org/oai2"
     user-agent: "company@yopmail.com"
