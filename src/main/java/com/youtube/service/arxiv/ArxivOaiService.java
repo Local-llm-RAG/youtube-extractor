@@ -84,7 +84,7 @@ public class ArxivOaiService {
                         case "identifier", "datestamp" -> {
                             if (inHeader) tag = name;
                         }
-                        case "title", "abstract", "categories", "comments", "journal-ref", "doi", "license", "keyname",
+                        case "id", "title", "abstract", "categories", "comments", "journal-ref", "doi", "license", "keyname",
                              "forenames" -> {
                             if (inMetadata) tag = name;
                         }
@@ -131,6 +131,7 @@ public class ArxivOaiService {
                             }
                         }
                         case "token" -> resumptionToken = text;
+                        case "id" -> cur.setArxivId(text);
                     }
                 }
 

@@ -17,8 +17,6 @@ public class ArxivRecord {
     private String license;
     private final List<String> categories = new ArrayList<>();
     private final List<ArxivAuthor> authors = new ArrayList<>();
-
-    // new
     private String arxivId;
     private ArxivPaperDocument document;
 
