@@ -1,5 +1,6 @@
-package com.youtube.jpa.dao.arxiv;
+package com.youtube.arxiv.oai.author;
 
+import com.youtube.arxiv.oai.record.ArxivRecordEntity;
 import jakarta.persistence.*;
 import lombok.*;
 

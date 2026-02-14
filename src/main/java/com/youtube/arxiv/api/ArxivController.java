@@ -1,4 +1,4 @@
-package com.youtube.arxiv;
+package com.youtube.arxiv.api;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

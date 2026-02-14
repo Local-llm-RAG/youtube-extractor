@@ -1,9 +1,6 @@
-package com.youtube.jpa.repository;
+package com.youtube.arxiv.oai.paper;
 
-import com.youtube.jpa.dao.arxiv.ArxivPaperDocumentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Optional;
 
 public interface ArxivPaperDocumentRepository extends JpaRepository<ArxivPaperDocumentEntity, Long> {
 }

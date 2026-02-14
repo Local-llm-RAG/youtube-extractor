@@ -1,6 +1,6 @@
 package com.youtube.startup;
 
-import com.youtube.service.arxiv.ArxivGenericFacade;
+import com.youtube.arxiv.oai.ArxivGenericFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;

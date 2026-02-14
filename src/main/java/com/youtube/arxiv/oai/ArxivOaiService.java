@@ -1,4 +1,4 @@
-package com.youtube.service.arxiv;
+package com.youtube.arxiv.oai;
 
 import com.youtube.config.ArxivOaiProps;
 import com.youtube.external.rest.arxiv.ArxivClient;

@@ -1,4 +1,4 @@
-package com.youtube.arxiv;
+package com.youtube.arxiv.api;
 
 import lombok.Getter;
 import lombok.Setter;

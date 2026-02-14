@@ -1,8 +1,8 @@
-package com.youtube.service.arxiv;
+package com.youtube.arxiv.oai;
 
+import com.youtube.arxiv.oai.tracker.ArxivTracker;
 import com.youtube.external.rest.arxiv.dto.ArxivRecord;
 import com.youtube.external.rest.arxiv.dto.ArxivPaperDocument;
-import com.youtube.jpa.dao.arxiv.ArxivTracker;
 import com.youtube.service.grobid.GrobidService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

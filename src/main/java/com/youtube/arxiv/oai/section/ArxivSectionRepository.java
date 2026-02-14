@@ -1,6 +1,5 @@
-package com.youtube.jpa.repository;
+package com.youtube.arxiv.oai.section;
 
-import com.youtube.jpa.dao.arxiv.ArxivSectionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

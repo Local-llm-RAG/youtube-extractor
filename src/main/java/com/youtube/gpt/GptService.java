@@ -1,7 +1,7 @@
 package com.youtube.gpt;
 
 import com.youtube.jpa.dao.Video;
-import com.youtube.jpa.repository.ArxivRepository;
+import com.youtube.arxiv.oai.ArxivRepository;
 import com.youtube.jpa.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

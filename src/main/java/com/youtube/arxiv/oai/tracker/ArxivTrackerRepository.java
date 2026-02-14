@@ -1,6 +1,5 @@
-package com.youtube.jpa.repository;
+package com.youtube.arxiv.oai.tracker;
 
-import com.youtube.jpa.dao.arxiv.ArxivTracker;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

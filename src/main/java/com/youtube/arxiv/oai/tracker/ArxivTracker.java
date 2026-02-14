@@ -1,4 +1,4 @@
-package com.youtube.jpa.dao.arxiv;
+package com.youtube.arxiv.oai.tracker;
 
 import jakarta.persistence.*;
 import lombok.*;

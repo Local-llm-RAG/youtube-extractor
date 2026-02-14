@@ -1,12 +1,16 @@
-package com.youtube.service.arxiv;
+package com.youtube.arxiv.oai;
 
+import com.youtube.arxiv.oai.author.ArxivAuthorEntity;
+import com.youtube.arxiv.oai.author.ArxivAuthorRepository;
+import com.youtube.arxiv.oai.paper.ArxivPaperDocumentEntity;
+import com.youtube.arxiv.oai.paper.ArxivPaperDocumentRepository;
+import com.youtube.arxiv.oai.record.ArxivRecordEntity;
+import com.youtube.arxiv.oai.record.ArxivRecordRepository;
+import com.youtube.arxiv.oai.section.ArxivSectionEntity;
+import com.youtube.arxiv.oai.tracker.ArxivTracker;
+import com.youtube.arxiv.oai.tracker.ArxivTrackerRepository;
 import com.youtube.external.rest.arxiv.dto.ArxivRecord;
 import com.youtube.external.rest.arxiv.dto.Section;
-import com.youtube.jpa.dao.arxiv.*;
-import com.youtube.jpa.repository.ArxivAuthorRepository;
-import com.youtube.jpa.repository.ArxivPaperDocumentRepository;
-import com.youtube.jpa.repository.ArxivRecordRepository;
-import com.youtube.jpa.repository.ArxivTrackerRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

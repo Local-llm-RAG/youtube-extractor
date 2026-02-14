@@ -1,4 +1,4 @@
-package com.youtube.arxiv;
+package com.youtube.arxiv.api;
 
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndLink;
