@@ -5,7 +5,7 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 @Getter
-public enum GptTaskPriceMultiplier {
+public enum GPTTaskPriceMultiplier {
 
     SHORT_ANSWER("0.1"),
     SUMMARY("0.2"),
@@ -16,7 +16,7 @@ public enum GptTaskPriceMultiplier {
 
     private final BigDecimal value;
 
-    GptTaskPriceMultiplier(String value) {
+    GPTTaskPriceMultiplier(String value) {
         this.value = new BigDecimal(value);
     }
 }

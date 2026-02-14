@@ -1,21 +1,11 @@
-package com.youtube.external.rest.arxiv;
+package com.youtube.arxiv.oai;
 
-import com.youtube.config.ArxivOaiProps;
-import com.youtube.external.rest.arxiv.dto.ArxivAuthor;
-import com.youtube.external.rest.arxiv.dto.ArxivRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import javax.xml.stream.XMLEventReader;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.events.XMLEvent;
-import java.io.ByteArrayInputStream;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor

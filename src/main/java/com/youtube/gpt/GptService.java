@@ -1,49 +1,38 @@
 package com.youtube.gpt;
 
-import com.youtube.jpa.dao.Video;
-import com.youtube.arxiv.oai.ArxivRepository;
-import com.youtube.jpa.repository.VideoRepository;
+import com.youtube.arxiv.oai.section.ArxivSectionFilter;
+import com.youtube.gpt.estimation.ArxivGPTCostEstimator;
+import com.youtube.gpt.estimation.CostEstimate;
+import com.youtube.gpt.estimation.YoutubeGPTCostEstimator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.AbstractMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 public class GptService {
-    private final GPTClient gptClient;
-    private final VideoRepository videoRepository;
-    private final ArxivRepository arxivRepository;
+    private final YoutubeGPTCostEstimator youtubeCostEstimator;
+    private final ArxivGPTCostEstimator arxivCostEstimator;
 
-    public CostEstimate findAndEstimateResourceTransformationCost(
+    public CostEstimate findAndEstimateYoutubeTransformationCost(
             Map<String, String> multilingualSystemPrompt,
-            ResourceType resourceType,
             String resourceUniqueExternalId,
-            GptTaskPriceMultiplier multiplier
+            GPTTaskPriceMultiplier multiplier
     ) {
-        Stream<AbstractMap.SimpleEntry<String, String>> resourceText = Stream.of();
-        if (resourceType == ResourceType.YOUTUBE_TRANSCRIPT) {
-            Video video = videoRepository.findByYoutubeVideoId(resourceUniqueExternalId)
-                    .orElseThrow(() -> new RuntimeException("Video not found"));
-            resourceText = video.getTranscripts().stream()
-                    .map(videoTranscript ->
-                            new AbstractMap.SimpleEntry<>(videoTranscript.getLanguage(), videoTranscript.getTranscriptText()));
+        return youtubeCostEstimator.findAndEstimateResourceTransformationCost(
+                multilingualSystemPrompt, resourceUniqueExternalId, multiplier
+        );
+    }
 
-        } else if (resourceType == ResourceType.ARCHIVE_PAPER) {
-            resourceText = Stream.of(); // TODO: when database this needs to be implemented
-        }
-
-        return resourceText
-                .map(langWithText -> gptClient.estimateMaxTextCost(multilingualSystemPrompt.get(langWithText.getKey()), langWithText.getValue(), multiplier.getValue()))
-                .reduce((acc, supl) -> CostEstimate.builder()
-                        .promptTokens(acc.promptTokens() + supl.promptTokens())
-                        .averageCompletionTokens(acc.averageCompletionTokens() + supl.averageCompletionTokens())
-                        .averagePrice(acc.averagePrice().add(supl.averagePrice()))
-                        .build())
-                .orElseThrow(() -> new RuntimeException("No Cost generation found"));
-
-
+    public CostEstimate findAndEstimateArxivTransformationCost(
+            Map<String, String> multilingualSystemPrompt,
+            String resourceUniqueExternalId,
+            GPTTaskPriceMultiplier multiplier,
+            ArxivSectionFilter filter
+    ) {
+        return arxivCostEstimator.findAndEstimateResourceTransformationCost(
+                multilingualSystemPrompt, resourceUniqueExternalId, multiplier, filter
+        );
     }
 }

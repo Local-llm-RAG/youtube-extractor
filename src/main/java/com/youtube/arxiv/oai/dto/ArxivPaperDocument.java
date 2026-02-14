@@ -1,4 +1,4 @@
-package com.youtube.external.rest.arxiv.dto;
+package com.youtube.arxiv.oai.dto;
 
 import java.util.List;
 

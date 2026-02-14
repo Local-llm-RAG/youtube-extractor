@@ -1,4 +1,4 @@
-package com.youtube.gpt;
+package com.youtube.gpt.estimation;
 
 import lombok.Builder;
 

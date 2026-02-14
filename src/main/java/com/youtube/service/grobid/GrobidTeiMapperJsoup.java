@@ -1,7 +1,7 @@
 package com.youtube.service.grobid;
 
-import com.youtube.external.rest.arxiv.dto.ArxivPaperDocument;
-import com.youtube.external.rest.arxiv.dto.Section;
+import com.youtube.arxiv.oai.dto.ArxivPaperDocument;
+import com.youtube.arxiv.oai.dto.Section;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;

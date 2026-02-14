@@ -1,7 +1,7 @@
 package com.youtube.service.grobid;
 
 import com.youtube.config.GrobidProperties;
-import com.youtube.external.rest.arxiv.dto.ArxivPaperDocument;
+import com.youtube.arxiv.oai.dto.ArxivPaperDocument;
 import com.youtube.external.rest.grobid.GrobidClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

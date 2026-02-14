@@ -1,9 +1,8 @@
 package com.youtube.arxiv.oai;
 
 import com.youtube.config.ArxivOaiProps;
-import com.youtube.external.rest.arxiv.ArxivClient;
-import com.youtube.external.rest.arxiv.dto.ArxivAuthor;
-import com.youtube.external.rest.arxiv.dto.ArxivRecord;
+import com.youtube.arxiv.oai.dto.ArxivAuthor;
+import com.youtube.arxiv.oai.dto.ArxivRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
