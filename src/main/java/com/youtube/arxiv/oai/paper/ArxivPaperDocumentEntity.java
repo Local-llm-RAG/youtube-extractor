@@ -4,6 +4,8 @@ import com.youtube.arxiv.oai.record.ArxivRecordEntity;
 import com.youtube.arxiv.oai.section.ArxivSectionEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -45,6 +47,28 @@ public class ArxivPaperDocumentEntity {
     @Column(name = "tei_xml_raw", columnDefinition = "text")
     private String teiXmlRaw;
 
+    @Column(name = "raw_content", columnDefinition = "text")
+    private String rawContent;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "keyword_list", columnDefinition = "text[]")
+    private List<String> keywords;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "affiliation_list", columnDefinition = "text[]")
+    private List<String> affiliations;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "reference_list", columnDefinition = "text[]")
+    private List<String> references;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "class_code_list", columnDefinition = "text[]")
+    private List<String> classCodes;
+
+    @Column(name = "doc_type", columnDefinition = "text")
+    private String docType;
+
     @OneToMany(
         mappedBy = "document",
         cascade = CascadeType.ALL,
@@ -52,24 +76,6 @@ public class ArxivPaperDocumentEntity {
     )
     @OrderColumn(name = "pos")
     private List<ArxivSectionEntity> sections = new ArrayList<>();
-
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
-    @PrePersist
-    void prePersist() {
-        var now = OffsetDateTime.now();
-        if (createdAt == null) createdAt = now;
-        if (updatedAt == null) updatedAt = now;
-    }
-
-    @PreUpdate
-    void preUpdate() {
-        updatedAt = OffsetDateTime.now();
-    }
 
     public void addSection(ArxivSectionEntity section) {
         sections.add(section);

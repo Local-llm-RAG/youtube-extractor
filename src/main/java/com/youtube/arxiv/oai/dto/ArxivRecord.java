@@ -9,8 +9,6 @@ import java.util.List;
 public class ArxivRecord {
     private String oaiIdentifier;
     private String datestamp;
-    private String title;
-    private String abstractText;
     private String comments;
     private String journalRef;
     private String doi;

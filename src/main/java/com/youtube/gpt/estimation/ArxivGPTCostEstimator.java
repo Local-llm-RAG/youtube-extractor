@@ -59,12 +59,12 @@ public class ArxivGPTCostEstimator {
 
         StringBuilder sb = new StringBuilder();
 
-        if (nonNull(record.getTitle())) {
-            sb.append("TITLE: ").append(record.getTitle()).append("\n\n");
+        if (nonNull(record.getDocument().getTitle())) {
+            sb.append("TITLE: ").append(record.getDocument().getTitle()).append("\n\n");
         }
 
-        if (nonNull(record.getAbstractText())) {
-            sb.append("ABSTRACT: ").append(record.getAbstractText()).append("\n\n");
+        if (nonNull(record.getDocument().getAbstractText())) {
+            sb.append("ABSTRACT: ").append(record.getDocument().getAbstractText()).append("\n\n");
         }
 
         for (ArxivSectionEntity s : list) {
@@ -133,7 +133,7 @@ public class ArxivGPTCostEstimator {
             TITLE: %s
 
             ABSTRACT: %s
-            """.formatted(nullToEmpty(r.getTitle()), nullToEmpty(r.getAbstractText()));
+            """.formatted(nullToEmpty(r.getDocument().getTitle()), nullToEmpty(r.getDocument().getAbstractText()));
     }
 
     private String nullToEmpty(String s) { return isNull(s) ? "" : s; }

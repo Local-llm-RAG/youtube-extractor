@@ -38,12 +38,6 @@ public class ArxivRecordEntity {
     @Column(name = "datestamp")
     private LocalDate datestamp;
 
-    @Column(name = "title", columnDefinition = "text")
-    private String title;
-
-    @Column(name = "abstract_text", columnDefinition = "text")
-    private String abstractText;
-
     @Column(name = "comments", columnDefinition = "text")
     private String comments;
 

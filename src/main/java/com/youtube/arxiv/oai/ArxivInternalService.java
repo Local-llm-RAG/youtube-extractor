@@ -28,8 +28,6 @@ import java.util.stream.IntStream;
 public class ArxivInternalService {
     private final ArxivTrackerRepository arxivTrackerRepository;
     private final ArxivRecordRepository arxivRecordRepository;
-    private final ArxivAuthorRepository arxivAuthorRepository;
-    private final ArxivPaperDocumentRepository arxivPaperDocumentRepository;
 
     public ArxivTracker getArchiveTracker() {
         return arxivTrackerRepository.findTopByOrderByDateEndDesc()
@@ -39,8 +37,8 @@ public class ArxivInternalService {
                         return ArxivTracker.builder()
                                 .allPapersForPeriod(0)
                                 .processedPapersForPeriod(0)
-                                .dateStart(arxivTracker.getDateStart().plusDays(startEndDateDiff))
-                                .dateEnd(arxivTracker.getDateEnd().plusDays(startEndDateDiff))
+                                .dateStart(arxivTracker.getDateStart().minusDays(startEndDateDiff))
+                                .dateEnd(arxivTracker.getDateEnd().minusDays(startEndDateDiff))
                                 .build();
                     }
                     return arxivTracker;
@@ -57,14 +55,16 @@ public class ArxivInternalService {
 
     @Transactional
     public void persistArxivState(ArxivTracker tracker, ArxivRecord r) {
-        arxivTrackerRepository.save(tracker);
+        persistTracker(tracker);
 
-        var record = ArxivRecordEntity.builder()
+        persistArxivRecord(r);
+    }
+
+    private void persistArxivRecord(ArxivRecord r) {
+        ArxivRecordEntity record = ArxivRecordEntity.builder()
                 .arxivId(r.getArxivId())
                 .oaiIdentifier(r.getOaiIdentifier())
                 .datestamp(r.getDatestamp() == null ? null : LocalDate.parse(r.getDatestamp()))
-                .title(r.getTitle())
-                .abstractText(r.getAbstractText())
                 .comments(r.getComments())
                 .journalRef(r.getJournalRef())
                 .doi(r.getDoi())
@@ -91,6 +91,12 @@ public class ArxivInternalService {
                     .title(r.getDocument().title())
                     .abstractText(r.getDocument().abstractText())
                     .teiXmlRaw(r.getDocument().teiXmlRaw())
+                    .rawContent(r.getDocument().rawContent())
+                    .keywords(r.getDocument().keywords())
+                    .affiliations(r.getDocument().affiliation())
+                    .classCodes(r.getDocument().classCodes())
+                    .references(r.getDocument().references())
+                    .docType(r.getDocument().docType())
                     .sections(new ArrayList<>())
                     .build();
 
@@ -111,6 +117,10 @@ public class ArxivInternalService {
             record.setDocument(doc);
         }
         arxivRecordRepository.save(record);
+    }
+
+    public void persistTracker(ArxivTracker tracker) {
+        arxivTrackerRepository.save(tracker);
     }
 
     public List<String> findArxivIdsProcessedInPeriod(LocalDate dateStart, LocalDate dateEnd) {

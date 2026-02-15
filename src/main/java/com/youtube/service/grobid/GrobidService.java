@@ -17,8 +17,6 @@ public class GrobidService {
     private final GrobidProperties props;
     private final GrobidClient grobidClient;
 
-    private static final Pattern TAGS = Pattern.compile("<[^>]+>");
-
     public ArxivPaperDocument processGrobidDocument(String arxivId, String oaiIdentifier, byte[] pdfBytes) {
         long t0 = System.nanoTime();
         String xmlString = grobidClient.processPdfToXmlString(arxivId, pdfBytes, props.baseUrl(), props.fulltextEndpoint());

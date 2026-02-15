@@ -106,14 +106,6 @@ public class ArxivOaiService {
                     switch (tag) {
                         case "identifier" -> cur.setOaiIdentifier(text);
                         case "datestamp" -> cur.setDatestamp(text);
-                        case "title" -> cur.setTitle(text);
-                        case "abstract" -> {
-                            if (cur.getAbstractText() == null) {
-                                cur.setAbstractText(text);
-                            } else {
-                                cur.setAbstractText(cur.getAbstractText() + " " + text);
-                            }
-                        }
                         case "categories" -> cur.getCategories().addAll(List.of(text.split("\\s+")));
                         case "comments" -> cur.setComments(text);
                         case "journal-ref" -> cur.setJournalRef(text);

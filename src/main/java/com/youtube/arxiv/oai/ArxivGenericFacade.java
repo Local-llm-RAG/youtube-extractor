@@ -76,6 +76,8 @@ public class ArxivGenericFacade {
                 .toList();
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
+        arxivTracker.setProcessedPapersForPeriod(futures.size());
+        arxivInternalService.persistTracker(arxivTracker);
         log.info("Processed {} records with GROBID", recs.size());
     }
 
