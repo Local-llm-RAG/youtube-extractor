@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +31,10 @@ public class YouTubeChannelVideosService {
     @Transactional
     public List<String> fetchAndSaveAllVideoIdsByHandle(
             String fullChannelUrl,
-            Boolean runTranscriptsSavingForAll,
+            YoutubeTranscriptFetchStrategy fetchStrategy,
             List<String> desiredLanguages,
-            Boolean retryOnlyThoseWithoutTranscripts,
-            Instant optionalStartDate,
-            Instant optionalEndDate
+            LocalDate optionalStartDate,
+            LocalDate optionalEndDate
     ) throws Exception {
         Channel ytChannel = youtubeClientService.fetchChannelByChannelHandle(normalizeHandle(fullChannelUrl));
         String uploadsPlaylistId = ytChannel.getContentDetails()
@@ -48,14 +48,14 @@ public class YouTubeChannelVideosService {
         Map<String, Map<String, String>> categoryTitlesByLanguage = categoriesPerLanguage(desiredLanguages);
         if (uniqueVideoIds.isEmpty()) {
             log.info("No videos for channel collected");
-            return persistAndPublish(ytChannel, categoryTitlesByLanguage, List.of(), runTranscriptsSavingForAll, desiredLanguages, false);
+            return persistAndPublish(ytChannel, categoryTitlesByLanguage, List.of(), fetchStrategy, desiredLanguages);
         }
 
         List<com.google.api.services.youtube.model.Video> ytVideos =
                 youtubeClientService.fetchVideosDetailsBatched(uniqueVideoIds);
         log.info("Video details successfully collected");
         // 2) DB work (TX)
-        return persistAndPublish(ytChannel, categoryTitlesByLanguage, ytVideos, runTranscriptsSavingForAll, desiredLanguages, retryOnlyThoseWithoutTranscripts);
+        return persistAndPublish(ytChannel, categoryTitlesByLanguage, ytVideos, fetchStrategy, desiredLanguages);
     }
 
     @Transactional
@@ -68,9 +68,8 @@ public class YouTubeChannelVideosService {
     private List<String> persistAndPublish(Channel ytChannel,
                                            Map<String, Map<String, String>> categoryMap,
                                            List<com.google.api.services.youtube.model.Video> allVideos,
-                                           Boolean runTranscriptsSavingForAll,
-                                           List<String> desiredLanguages,
-                                           Boolean retryOnlyThoseWithoutTranscripts) {
+                                           YoutubeTranscriptFetchStrategy fetchStrategy,
+                                           List<String> desiredLanguages) {
         ChannelDao channel = youtubeInternalService.upsertChannelFromYouTube(ytChannel);
 
         List<Video> insertedVideos = youtubeInternalService.insertMissingVideos(channel, allVideos, categoryMap);
@@ -80,19 +79,18 @@ public class YouTubeChannelVideosService {
         youtubeInternalService.upsertVideoDetails(channel, allVideos, categoryMap);
 
         Long channelDbId = channel.getId();
-        if (retryOnlyThoseWithoutTranscripts) {
+        if (fetchStrategy == YoutubeTranscriptFetchStrategy.FOR_FAILED) {
             youtubeInternalService.findAllVideosForChannelWithCategories(channel, categoryMap, allVideos)
                     .stream()
                     .filter(video -> !video.isTranscriptPassed())
                     .forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
         }
-        if (runTranscriptsSavingForAll) {
+        else if (fetchStrategy == YoutubeTranscriptFetchStrategy.FOR_ALL) {
             List<Video> allVideosFromDBWithCategories = youtubeInternalService.findAllVideosForChannelWithCategories(channel, categoryMap, allVideos);
             allVideosFromDBWithCategories.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
-        } else {
+        } else if (fetchStrategy == YoutubeTranscriptFetchStrategy.FOR_NEWEST) {
             insertedVideos.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
         }
-
         return allVideos.stream().map(com.google.api.services.youtube.model.Video::getId).toList();
     }
 

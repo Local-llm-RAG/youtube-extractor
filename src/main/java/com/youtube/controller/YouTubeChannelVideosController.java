@@ -1,12 +1,14 @@
 package com.youtube.controller;
 
 import com.youtube.service.youtube.YouTubeChannelVideosService;
+import com.youtube.service.youtube.YoutubeTranscriptFetchStrategy;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -21,17 +23,15 @@ public class YouTubeChannelVideosController {
     @GetMapping("/videos")
     public ResponseEntity<List<String>> getVideoIds(
             @RequestParam String handle,
-            @RequestParam Boolean runTranscriptsSavingForAll,
+            @RequestParam YoutubeTranscriptFetchStrategy fetchStrategy,
             @RequestParam List<String> desiredLanguages,
-            @RequestParam Boolean retryOnlyThoseWithoutTranscripts,
-            @RequestParam Instant optionalStartDate,
-            @RequestParam Instant optionalEndDate
+            @RequestParam(required = false) LocalDate optionalStartDate,
+            @RequestParam(required = false) LocalDate optionalEndDate
     ) throws Exception {
         return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByHandle(
                 handle,
-                runTranscriptsSavingForAll,
+                fetchStrategy,
                 desiredLanguages,
-                retryOnlyThoseWithoutTranscripts,
                 optionalStartDate,
                 optionalEndDate));
     }

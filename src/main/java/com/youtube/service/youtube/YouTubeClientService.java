@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -39,8 +42,8 @@ public class YouTubeClientService {
 
     public List<String> fetchUniqueVideoIdsFromUploadsPlaylist(
             String uploadsPlaylistId,
-            Instant startInclusive,
-            Instant endExclusive
+            LocalDate startInclusive,
+            LocalDate endExclusive
     ) throws Exception {
 
         Objects.requireNonNull(uploadsPlaylistId, "uploadsPlaylistId");
@@ -63,7 +66,9 @@ public class YouTubeClientService {
                         PlaylistItemSnippet snippet = item.getSnippet();
                         if (snippet == null || snippet.getPublishedAt() == null) return;
 
-                        Instant publishedAt = Instant.ofEpochMilli(snippet.getPublishedAt().getValue());
+                        LocalDate publishedAt = Instant.ofEpochMilli(snippet.getPublishedAt().getValue())
+                                        .atZone(ZoneId.from(ZoneOffset.UTC))
+                                        .toLocalDate();
                         if (publishedAt.isBefore(startInclusive)) {
                             stop.set(true);
                         }
@@ -71,7 +76,10 @@ public class YouTubeClientService {
                     .takeWhile(_ -> !stop.get())
                     .filter(item -> item.getSnippet() != null && item.getSnippet().getPublishedAt() != null)
                     .filter(item -> {
-                        Instant publishedAt = Instant.ofEpochMilli(item.getSnippet().getPublishedAt().getValue());
+                        LocalDate publishedAt =
+                                Instant.ofEpochMilli(item.getSnippet().getPublishedAt().getValue())
+                                        .atZone(ZoneId.from(ZoneOffset.UTC))
+                                        .toLocalDate();
                         if (startInclusive != null && publishedAt.isBefore(startInclusive)) return false;
                         if (endExclusive != null && publishedAt.isAfter(endExclusive)) return false;
                         return true;
