@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -23,62 +24,42 @@ public class ArxivGenericFacade {
     private final GrobidService grobidService;
     private final ArxivInternalService arxivInternalService;
     private final ExecutorService grobidPool = Executors.newFixedThreadPool(2, r -> {
-                Thread t = new Thread(r);
-                t.setName("grobid-worker-" + t.getId());
-                t.setDaemon(true);
-                return t;
-            });
-    public ArxivTracker getArxivTracker() {
-        return arxivInternalService.getArchiveTracker();
+        Thread t = new Thread(r);
+        t.setName("grobid-worker-" + t.getId());
+        t.setDaemon(true);
+        return t;
+    });
+
+    public ArxivTracker getArxivTracker(LocalDate startDate) {
+        return arxivInternalService.getArchiveTracker(startDate);
     }
 
     public void processCollectedArxivRecord(ArxivTracker arxivTracker) {
-        if (!arxivTracker.getAllPapersForPeriod().equals(arxivTracker.getProcessedPapersForPeriod())) {
-            Set<String> processedArxivIds = new java.util.HashSet<>(
-                    arxivInternalService.findArxivIdsProcessedInPeriod(
-                            arxivTracker.getDateStart(),
-                            arxivTracker.getDateEnd()
-                    )
-            );
-            List<ArxivRecord> recs = arxivOaiService.getArxivPapersMetadata(
-                    arxivTracker.getDateStart().toString(),
-                    arxivTracker.getDateEnd().toString()
-            );
-            arxivTracker.setAllPapersForPeriod(recs.size());
-            List<ArxivRecord> unprocessed = recs.stream()
-                    .peek(r -> r.setArxivId(ArxivRecord.extractArxivIdFromOai(r.getOaiIdentifier())))
-                    .filter(r -> r.getArxivId() != null)
-                    .filter(r -> !processedArxivIds.contains(r.getArxivId()))
-                    .toList();
-
-            AtomicInteger processed = new AtomicInteger(arxivTracker.getProcessedPapersForPeriod());
-
-            List<CompletableFuture<Void>> futures = unprocessed.stream()
-                    .map(r -> CompletableFuture.runAsync(() -> processOne(arxivTracker, r, processed), grobidPool))
-                    .toList();
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-            log.info("Resumed: processed {} remaining records (out of {} total) for period",
-                    unprocessed.size(), recs.size());
-            return;
-        }
-
-        List<ArxivRecord> recs = arxivOaiService.getArxivPapersMetadata(
+        Set<String> processedArxivIds = new java.util.HashSet<>(
+                arxivInternalService.findArxivIdsProcessedInPeriod(
+                        arxivTracker.getDateStart(),
+                        arxivTracker.getDateEnd()
+                )
+        );
+        List<ArxivRecord> allRecords = arxivOaiService.getArxivPapersMetadata(
                 arxivTracker.getDateStart().toString(),
-                arxivTracker.getDateEnd().toString());
-
-        arxivTracker.setAllPapersForPeriod(recs.size());
+                arxivTracker.getDateEnd().toString()
+        );
+        arxivTracker.setAllPapersForPeriod(allRecords.size());
+        List<ArxivRecord> unprocessed = allRecords.stream()
+                .peek(r -> r.setArxivId(ArxivRecord.extractArxivIdFromOai(r.getOaiIdentifier())))
+                .filter(r -> r.getArxivId() != null)
+                .filter(r -> !processedArxivIds.contains(r.getArxivId()))
+                .toList();
 
         AtomicInteger processed = new AtomicInteger(arxivTracker.getProcessedPapersForPeriod());
 
-        List<CompletableFuture<Void>> futures = recs.stream()
+        List<CompletableFuture<Void>> futures = unprocessed.stream()
                 .map(r -> CompletableFuture.runAsync(() -> processOne(arxivTracker, r, processed), grobidPool))
                 .toList();
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-        arxivTracker.setProcessedPapersForPeriod(futures.size());
-        arxivInternalService.persistTracker(arxivTracker);
-        log.info("Processed {} records with GROBID", recs.size());
+        log.info("Processed {} records with GROBID", unprocessed.size());
     }
 
     private void processOne(ArxivTracker arxivTracker, ArxivRecord r, AtomicInteger processed) {

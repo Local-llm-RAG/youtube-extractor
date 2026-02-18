@@ -7,6 +7,8 @@ import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 @Component
@@ -20,7 +22,8 @@ public class OAIProcessorService implements Job {
     public void execute(JobExecution execution) {
         IntStream
                 .iterate(0, i -> i + 1) // iterate eternally
-                .mapToObj(_ -> arxivGenericFacade.getArxivTracker())
+                .mapToObj(i -> arxivGenericFacade.getArxivTracker(LocalDate.now().minusDays(i)))
+                .filter(Objects::nonNull) // filter fully processed
                 .forEach(arxivGenericFacade::processCollectedArxivRecord);
 
     }

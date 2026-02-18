@@ -1,9 +1,7 @@
 package com.youtube.arxiv.oai;
 
 import com.youtube.arxiv.oai.author.ArxivAuthorEntity;
-import com.youtube.arxiv.oai.author.ArxivAuthorRepository;
 import com.youtube.arxiv.oai.paper.ArxivPaperDocumentEntity;
-import com.youtube.arxiv.oai.paper.ArxivPaperDocumentRepository;
 import com.youtube.arxiv.oai.record.ArxivRecordEntity;
 import com.youtube.arxiv.oai.record.ArxivRecordRepository;
 import com.youtube.arxiv.oai.section.ArxivSectionEntity;
@@ -20,6 +18,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -29,28 +28,22 @@ public class ArxivInternalService {
     private final ArxivTrackerRepository arxivTrackerRepository;
     private final ArxivRecordRepository arxivRecordRepository;
 
-    public ArxivTracker getArchiveTracker() {
-        return arxivTrackerRepository.findTopByOrderByDateEndDesc()
-                .map(arxivTracker -> {
-                    if (arxivTracker.getProcessedPapersForPeriod().equals(arxivTracker.getAllPapersForPeriod())) { // finished cycle
-                        long startEndDateDiff = ChronoUnit.DAYS.between(arxivTracker.getDateStart(), arxivTracker.getDateEnd());
-                        return ArxivTracker.builder()
-                                .allPapersForPeriod(0)
-                                .processedPapersForPeriod(0)
-                                .dateStart(arxivTracker.getDateStart().minusDays(startEndDateDiff))
-                                .dateEnd(arxivTracker.getDateEnd().minusDays(startEndDateDiff))
-                                .build();
-                    }
-                    return arxivTracker;
-                })
-                .orElse(
-                        ArxivTracker.builder()
-                                .allPapersForPeriod(0)
-                                .processedPapersForPeriod(0)
-                                .dateStart(LocalDate.now().minusDays(1))
-                                .dateEnd(LocalDate.now())
-                                .build()
-                );
+    public ArxivTracker getArchiveTracker(LocalDate startDate) {
+        Optional<ArxivTracker> trackerForDate = arxivTrackerRepository.findByDateStart(startDate);
+        if (trackerForDate.isPresent()) {
+            // Not finished processing
+            if (trackerForDate.get().getProcessedPapersForPeriod() != 0 && !trackerForDate.get().getAllPapersForPeriod().equals(trackerForDate.get().getProcessedPapersForPeriod())) {
+                return trackerForDate.get();
+            } else return null; // skip the ones that are fully processed
+        } else {
+            return ArxivTracker.builder()
+                    .allPapersForPeriod(0)
+                    .processedPapersForPeriod(0)
+                    .dateStart(startDate)
+                    .dateEnd(startDate.plusDays(1))
+                    .build();
+
+        }
     }
 
     @Transactional
