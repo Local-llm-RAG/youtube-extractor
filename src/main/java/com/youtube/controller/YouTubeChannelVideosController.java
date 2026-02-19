@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -18,8 +17,24 @@ public class YouTubeChannelVideosController {
 
     private final YouTubeChannelVideosService service;
 
+    @Operation(summary = "Get all videos metadata and transcripts for given channels")
+    @GetMapping("/mass")
+    public ResponseEntity<List<String>> getAllVideosForChannels(
+            @RequestParam List<String> handles,
+            @RequestParam YoutubeTranscriptFetchStrategy fetchStrategy,
+            @RequestParam List<String> desiredLanguages,
+            @RequestParam(required = false) LocalDate optionalStartDate,
+            @RequestParam(required = false) LocalDate optionalEndDate
+    ) {
+        return ResponseEntity.ok(service.fetchAndSaveAllVideoIdsByMultipleHandles(
+                handles,
+                fetchStrategy,
+                desiredLanguages,
+                optionalStartDate,
+                optionalEndDate));
+    }
 
-    @Operation(summary = "Get all video IDs for a channel handle")
+    @Operation(summary = "Get all videos metadata and transcripts for a channel handle")
     @GetMapping("/videos")
     public ResponseEntity<List<String>> getVideoIds(
             @RequestParam String handle,

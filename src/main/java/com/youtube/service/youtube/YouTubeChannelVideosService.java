@@ -11,11 +11,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -27,6 +27,30 @@ public class YouTubeChannelVideosService {
     private final YouTubeClientService youtubeClientService;
     private final YouTubeInternalService youtubeInternalService;
     private final ApplicationEventPublisher publisher;
+
+    @Transactional
+    public List<String> fetchAndSaveAllVideoIdsByMultipleHandles(
+            List<String> channelUrls,
+            YoutubeTranscriptFetchStrategy fetchStrategy,
+            List<String> desiredLanguages,
+            LocalDate optionalStartDate,
+            LocalDate optionalEndDate
+    ) {
+        return channelUrls.stream().flatMap(channelHandle -> {
+            try {
+                return fetchAndSaveAllVideoIdsByHandle(
+                        channelHandle,
+                        fetchStrategy,
+                        desiredLanguages,
+                        optionalStartDate,
+                        optionalEndDate
+                ).stream();
+            } catch (Exception e) {
+                log.error("Something went wrong with channelHandle {}", channelHandle);
+                return Stream.of();
+            }
+        }).toList();
+    }
 
     @Transactional
     public List<String> fetchAndSaveAllVideoIdsByHandle(
@@ -84,8 +108,7 @@ public class YouTubeChannelVideosService {
                     .stream()
                     .filter(video -> !video.isTranscriptPassed())
                     .forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
-        }
-        else if (fetchStrategy == YoutubeTranscriptFetchStrategy.FOR_ALL) {
+        } else if (fetchStrategy == YoutubeTranscriptFetchStrategy.FOR_ALL) {
             List<Video> allVideosFromDBWithCategories = youtubeInternalService.findAllVideosForChannelWithCategories(channel, categoryMap, allVideos);
             allVideosFromDBWithCategories.forEach(video -> publisher.publishEvent(new VideoDiscoveredEvent(video.getYoutubeVideoId(), channelDbId, desiredLanguages, video.getCategoriesEntry())));
         } else if (fetchStrategy == YoutubeTranscriptFetchStrategy.FOR_NEWEST) {
