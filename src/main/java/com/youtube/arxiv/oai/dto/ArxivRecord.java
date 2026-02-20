@@ -17,6 +17,7 @@ public class ArxivRecord {
     private final List<ArxivAuthor> authors = new ArrayList<>();
     private String arxivId;
     private ArxivPaperDocument document;
+    private String language;
 
     public ArxivAuthor lastAuthor() {
         return authors.getLast();

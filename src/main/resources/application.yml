@@ -78,7 +78,13 @@ arxiv:
   oai:
     base-url: "https://export.arxiv.org/oai2"
     user-agent: "company@yopmail.com"
-
+oai:
+  zenodo:
+    base-url: https://zenodo.org/oai2d
+    metadata-prefix: oai_datacite
+  arxiv:
+    base-url: "https://export.arxiv.org/oai2"
+    user-agent: "company@yopmail.com"
 grobid:
   base-url: http://localhost:8070
   fulltext-endpoint: /api/processFulltextDocument

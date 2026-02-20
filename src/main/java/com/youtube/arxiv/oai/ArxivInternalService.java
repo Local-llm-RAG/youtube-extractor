@@ -14,8 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,8 +29,8 @@ public class ArxivInternalService {
     private final ArxivTrackerRepository arxivTrackerRepository;
     private final ArxivRecordRepository arxivRecordRepository;
 
-    public ArxivTracker getArchiveTracker(LocalDate startDate) {
-        Optional<ArxivTracker> trackerForDate = arxivTrackerRepository.findByDateStart(startDate);
+    public ArxivTracker getArchiveTracker(LocalDate startDate, DataSource dataSource) {
+        Optional<ArxivTracker> trackerForDate = arxivTrackerRepository.findByDateStartAndDataSource(startDate, dataSource);
         if (trackerForDate.isPresent()) {
             // Not finished processing
             if (trackerForDate.get().getProcessedPapersForPeriod() != 0 && !trackerForDate.get().getAllPapersForPeriod().equals(trackerForDate.get().getProcessedPapersForPeriod())) {
@@ -41,6 +42,7 @@ public class ArxivInternalService {
                     .processedPapersForPeriod(0)
                     .dateStart(startDate)
                     .dateEnd(startDate.plusDays(1))
+                    .dataSource(dataSource)
                     .build();
 
         }
@@ -50,20 +52,23 @@ public class ArxivInternalService {
     public void persistArxivState(ArxivTracker tracker, ArxivRecord r) {
         persistTracker(tracker);
 
-        persistArxivRecord(r);
+        persistArxivRecord(r, tracker.getDataSource());
     }
 
-    private void persistArxivRecord(ArxivRecord r) {
+    private void persistArxivRecord(ArxivRecord r, DataSource dataSource) {
         ArxivRecordEntity record = ArxivRecordEntity.builder()
                 .arxivId(r.getArxivId())
                 .oaiIdentifier(r.getOaiIdentifier())
-                .datestamp(r.getDatestamp() == null ? null : LocalDate.parse(r.getDatestamp()))
+                .datestamp(r.getDatestamp() == null ? null : Instant.parse(r.getDatestamp())
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate())
                 .comments(r.getComments())
                 .journalRef(r.getJournalRef())
                 .doi(r.getDoi())
                 .license(r.getLicense())
                 .categories(new ArrayList<>())
                 .authors(new ArrayList<>())
+                .dataSource(dataSource)
                 .build();
         record.getCategories().addAll(r.getCategories());
         IntStream.range(0, r.getAuthors().size())
@@ -116,10 +121,11 @@ public class ArxivInternalService {
         arxivTrackerRepository.save(tracker);
     }
 
-    public List<String> findArxivIdsProcessedInPeriod(LocalDate dateStart, LocalDate dateEnd) {
-        return arxivRecordRepository.findArxivIdsProcessedInPeriod(
+    public List<String> findArxivIdsProcessedInPeriod(LocalDate dateStart, LocalDate dateEnd, DataSource dataSource) {
+        return arxivRecordRepository.findArxivIdsProcessedInPeriodAndByDataSource(
                 dateStart,
-                dateEnd
+                dateEnd,
+                dataSource
         );
     }
 }

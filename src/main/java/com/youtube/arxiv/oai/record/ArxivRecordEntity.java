@@ -1,5 +1,6 @@
 package com.youtube.arxiv.oai.record;
 
+import com.youtube.arxiv.oai.DataSource;
 import com.youtube.arxiv.oai.author.ArxivAuthorEntity;
 import com.youtube.arxiv.oai.paper.ArxivPaperDocumentEntity;
 import jakarta.persistence.*;
@@ -81,6 +82,9 @@ public class ArxivRecordEntity {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "data_source", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DataSource dataSource;
     @PrePersist
     void prePersist() {
         var now = OffsetDateTime.now();

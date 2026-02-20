@@ -1,5 +1,6 @@
 package com.youtube.arxiv.oai.tracker;
 
+import com.youtube.arxiv.oai.DataSource;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,4 +34,8 @@ public class ArxivTracker {
 
     @Column(name = "processed_papers_for_period", nullable = false)
     private Integer processedPapersForPeriod;
+
+    @Column(name = "data_source", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DataSource dataSource;
 }
