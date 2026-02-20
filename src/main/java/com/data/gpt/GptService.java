@@ -25,6 +25,16 @@ public class GptService {
         );
     }
 
+    public CostEstimate findAndEstimateYoutubeChannelTransformationCost(
+            Map<String, String> multilingualSystemPrompt,
+            String youtubeChannelId,
+            GPTTaskPriceMultiplier multiplier
+    ) {
+        return youtubeCostEstimator.findAndEstimateChannelTransformationCost(
+                multilingualSystemPrompt, youtubeChannelId, multiplier
+        );
+    }
+
     public CostEstimate findAndEstimateArxivTransformationCost(
             Map<String, String> multilingualSystemPrompt,
             String resourceUniqueExternalId,

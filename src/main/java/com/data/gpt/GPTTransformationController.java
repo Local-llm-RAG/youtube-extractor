@@ -25,6 +25,17 @@ public class GPTTransformationController {
         );
     }
 
+    @PostMapping("/estimate/youtube/channel")
+    public CostEstimate estimateYoutubeChannel(
+            @RequestParam Map<String, String> multilingualSystemPrompt,
+            @RequestParam String youtubeChannelId,
+            @RequestParam GPTTaskPriceMultiplier multiplier
+    ) {
+        return gptService.findAndEstimateYoutubeChannelTransformationCost(
+                multilingualSystemPrompt, youtubeChannelId, multiplier
+        );
+    }
+
     @PostMapping("/estimate/arxiv")
     public CostEstimate estimateArxiv(
             @RequestParam Map<String, String> multilingualSystemPrompt,

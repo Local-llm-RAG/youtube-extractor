@@ -33,11 +33,41 @@ public class YoutubeGPTCostEstimator {
                 .orElseThrow(() -> new RuntimeException("No Cost generation found"));
     }
 
+    public CostEstimate findAndEstimateChannelTransformationCost(
+            Map<String, String> multilingualSystemPrompt,
+            String youtubeChannelId,
+            GPTTaskPriceMultiplier multiplier
+    ) {
+        Stream<LangText> texts = youtubeChannelTexts(youtubeChannelId);
+
+        return texts
+                .map(langWithText ->
+                        gptClient.estimateMaxTextCost(
+                                multilingualSystemPrompt.get(langWithText.lang()),
+                                langWithText.text(),
+                                multiplier.getValue()
+                        )
+                )
+                .reduce((acc, supl) -> CostEstimate.builder()
+                        .promptTokens(acc.promptTokens() + supl.promptTokens())
+                        .averageCompletionTokens(acc.averageCompletionTokens() + supl.averageCompletionTokens())
+                        .averagePrice(acc.averagePrice().add(supl.averagePrice()))
+                        .build()
+                )
+                .orElseThrow(() -> new RuntimeException("No Cost generation found"));
+    }
+
     private Stream<LangText> youtubeTexts(String youtubeVideoId) {
         Video video = videoRepository.findByYoutubeVideoId(youtubeVideoId)
                 .orElseThrow(() -> new RuntimeException("Video not found"));
 
         return video.getTranscripts().stream()
+                .map(t -> new LangText(t.getLanguage(), t.getTranscriptText()));
+    }
+
+    private Stream<LangText> youtubeChannelTexts(String youtubeChannelId) {
+        return videoRepository.findAllByYoutubeChannelWithTranscripts(youtubeChannelId).stream()
+                .flatMap(v -> v.getTranscripts().stream())
                 .map(t -> new LangText(t.getLanguage(), t.getTranscriptText()));
     }
 }
