@@ -1,6 +1,6 @@
-package com.data.oai.common.author;
+package com.data.oai.generic.common.author;
 
-import com.data.oai.common.record.RecordEntity;
+import com.data.oai.generic.common.record.RecordEntity;
 import jakarta.persistence.*;
 import lombok.*;
 

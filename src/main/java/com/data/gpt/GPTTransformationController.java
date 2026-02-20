@@ -1,6 +1,6 @@
 package com.data.gpt;
 
-import com.data.oai.common.section.SectionFilter;
+import com.data.oai.generic.common.section.SectionFilter;
 import com.data.gpt.estimation.CostEstimate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

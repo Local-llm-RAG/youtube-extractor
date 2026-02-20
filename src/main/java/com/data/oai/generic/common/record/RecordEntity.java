@@ -1,8 +1,8 @@
-package com.data.oai.common.record;
+package com.data.oai.generic.common.record;
 
 import com.data.oai.DataSource;
-import com.data.oai.common.author.ArxivAuthorEntity;
-import com.data.oai.common.paper.PaperDocumentEntity;
+import com.data.oai.generic.common.author.ArxivAuthorEntity;
+import com.data.oai.generic.common.paper.PaperDocumentEntity;
 import jakarta.persistence.*;
 import lombok.*;
 

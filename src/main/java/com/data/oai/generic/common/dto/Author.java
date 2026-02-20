@@ -1,4 +1,4 @@
-package com.data.oai.common.dto;
+package com.data.oai.generic.common.dto;
 
 import lombok.Data;
 

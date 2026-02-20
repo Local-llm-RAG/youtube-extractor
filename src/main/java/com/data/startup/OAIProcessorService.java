@@ -1,7 +1,7 @@
 package com.data.startup;
 
-import com.data.oai.GenericFacade;
 import com.data.oai.DataSource;
+import com.data.oai.generic.GenericFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;

@@ -1,7 +1,7 @@
 package com.data.oai.zenodo;
 
-import com.data.oai.common.dto.Author;
-import com.data.oai.common.dto.Record;
+import com.data.oai.generic.common.dto.Author;
+import com.data.oai.generic.common.dto.Record;
 import com.data.config.ZenodoOaiProps;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ public class ZenodoOaiService {
             collected.addAll(page.records);
             token = page.resumptionToken;
             try {
-                Thread.sleep(800);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 continue;
             }
@@ -186,9 +186,6 @@ public class ZenodoOaiService {
                         case "token" -> resumptionToken = text;
                         case "headerIdentifier" -> {
                             cur.setOaiIdentifier(text);
-                            if (cur.getArxivId() == null) {
-                                cur.setArxivId(Record.extractZenodoRecId(text));
-                            }
                         }
                         case "datestamp" -> cur.setDatestamp(text);
 
@@ -287,11 +284,6 @@ public class ZenodoOaiService {
 
                                 if (cur.getLicense() != null) cur.setLicense(normalizeLicense(cur.getLicense()));
 
-                                if (cur.getArxivId() == null && cur.getOaiIdentifier() != null) {
-                                    cur.setArxivId(Record.extractZenodoRecId(cur.getOaiIdentifier()));
-                                }
-
-                                // apply license filter (same semantics as your arXiv service)
                                 if (isCommerciallySafeForResale(cur.getLicense()) && isLikelyScholarlyText(cur)) {
                                     records.add(cur);
                                 }

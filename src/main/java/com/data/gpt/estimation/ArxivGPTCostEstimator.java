@@ -1,9 +1,9 @@
 package com.data.gpt.estimation;
 
 import com.data.oai.PapersRepository;
-import com.data.oai.common.record.RecordEntity;
-import com.data.oai.common.section.SectionEntity;
-import com.data.oai.common.section.SectionFilter;
+import com.data.oai.generic.common.record.RecordEntity;
+import com.data.oai.generic.common.section.SectionEntity;
+import com.data.oai.generic.common.section.SectionFilter;
 import com.data.gpt.GPTClient;
 import com.data.gpt.GPTTaskPriceMultiplier;
 import lombok.RequiredArgsConstructor;

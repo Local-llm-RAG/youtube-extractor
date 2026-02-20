@@ -1,4 +1,4 @@
-package com.data.oai.common.author;
+package com.data.oai.generic.common.author;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,6 +1,6 @@
 package com.data.gpt;
 
-import com.data.oai.common.section.SectionFilter;
+import com.data.oai.generic.common.section.SectionFilter;
 import com.data.gpt.estimation.ArxivGPTCostEstimator;
 import com.data.gpt.estimation.CostEstimate;
 import com.data.gpt.estimation.YoutubeGPTCostEstimator;

@@ -1,33 +1,30 @@
-package com.data.oai;
+package com.data.oai.generic;
 
-import com.data.oai.arxiv.ArxivOaiService;
-import com.data.oai.common.tracker.Tracker;
-import com.data.oai.common.dto.Record;
-import com.data.oai.common.dto.PaperDocument;
+import com.data.oai.DataSource;
+import com.data.oai.PaperInternalService;
+import com.data.oai.generic.common.tracker.Tracker;
+import com.data.oai.generic.common.dto.Record;
+import com.data.oai.generic.common.dto.PaperDocument;
 import com.data.grobid.GrobidService;
-import com.data.oai.zenodo.ZenodoOaiService;
-import com.data.oai.zenodo.ZenodoRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class GenericFacade {
-    private final ArxivOaiService arxivOaiService;
-    private final ZenodoOaiService zenodoOaiService;
+
+    private final OaiSourceRegistry sourceRegistry;
     private final GrobidService grobidService;
     private final PaperInternalService paperInternalService;
+
     private final ExecutorService grobidPool = Executors.newFixedThreadPool(2, r -> {
         Thread t = new Thread(r);
         t.setName("grobid-worker-" + t.getId());
@@ -40,6 +37,8 @@ public class GenericFacade {
     }
 
     public void processCollectedArxivRecord(Tracker tracker) {
+        OaiSourceHandler handler = sourceRegistry.get(tracker.getDataSource());
+
         Set<String> processedArxivIds = new java.util.HashSet<>(
                 paperInternalService.findArxivIdsProcessedInPeriod(
                         tracker.getDateStart(),
@@ -48,24 +47,14 @@ public class GenericFacade {
                 )
         );
 
-        List<Record> allRecords = new ArrayList<>();
-        if(tracker.getDataSource() == DataSource.ARXIV){
-
-            allRecords = arxivOaiService.getArxivPapersMetadata(
-                    tracker.getDateStart().atStartOfDay().toString(),
-                    tracker.getDateEnd().toString()
-            );
-        }
-        else if (tracker.getDataSource() == DataSource.ZENODO){
-            allRecords = zenodoOaiService.getZenodoPapersMetadata(
-                    tracker.getDateEnd().atStartOfDay().plusHours(1).toString(),
-                    tracker.getDateEnd().atStartOfDay().plusHours(2).toString()
-            );
-        }
+        List<Record> allRecords = handler.fetchMetadata(
+                tracker.getDateStart().atStartOfDay(),
+                tracker.getDateEnd().atStartOfDay());
 
         tracker.setAllPapersForPeriod(allRecords.size());
+
         List<Record> unprocessed = allRecords.stream()
-                .peek(r -> r.setArxivId(Record.extractArxivIdFromOai(r.getOaiIdentifier())))
+                .peek(r -> r.setArxivId(Record.extractIdFromOai(r.getOaiIdentifier())))
                 .filter(r -> r.getArxivId() != null)
                 .filter(r -> !processedArxivIds.contains(r.getArxivId()))
                 .toList();
@@ -73,26 +62,19 @@ public class GenericFacade {
         AtomicInteger processed = new AtomicInteger(tracker.getProcessedPapersForPeriod());
 
         List<CompletableFuture<Void>> futures = unprocessed.stream()
-                .map(r -> CompletableFuture.runAsync(() -> processOne(tracker, r, processed), grobidPool))
+                .map(r -> CompletableFuture.runAsync(() -> processOne(handler, tracker, r, processed), grobidPool))
                 .toList();
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         log.info("Processed {} records with GROBID", unprocessed.size());
     }
 
-    private void processOne(Tracker tracker, Record r, AtomicInteger processed) {
+    private void processOne(OaiSourceHandler handler, Tracker tracker, Record r, AtomicInteger processed) {
         String arxivId = r.getArxivId();
 
         try {
-            byte[] pdf = null;
-            if(tracker.getDataSource() == DataSource.ARXIV){
-                pdf = arxivOaiService.getPdf(arxivId);
-            } else if (tracker.getDataSource() == DataSource.ZENODO){
-                var map = zenodoOaiService.getPdf(arxivId);
-                ZenodoRecord record = map.getKey();
-                r.setLanguage(record.getMetadata().getLanguage()); // TODO: apache tika or etc for language detection if null
-                pdf = map.getValue();
-            }
+            byte[] pdf = handler.fetchPdfAndEnrich(r);
+
             if (pdf == null || pdf.length == 0) {
                 log.warn("Empty PDF for {}", arxivId);
                 return;

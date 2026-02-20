@@ -1,7 +1,7 @@
 package com.data.grobid;
 
 import com.data.config.GrobidProperties;
-import com.data.oai.common.dto.PaperDocument;
+import com.data.oai.generic.common.dto.PaperDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

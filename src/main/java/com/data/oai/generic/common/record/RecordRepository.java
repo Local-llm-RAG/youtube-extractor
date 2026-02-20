@@ -1,4 +1,4 @@
-package com.data.oai.common.record;
+package com.data.oai.generic.common.record;
 
 import com.data.oai.DataSource;
 import org.springframework.data.jpa.repository.JpaRepository;

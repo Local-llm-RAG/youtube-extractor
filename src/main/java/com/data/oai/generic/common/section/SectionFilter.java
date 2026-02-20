@@ -1,4 +1,4 @@
-package com.data.oai.common.section;
+package com.data.oai.generic.common.section;
 
 import lombok.Getter;
 import lombok.Setter;

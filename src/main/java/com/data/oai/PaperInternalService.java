@@ -1,14 +1,14 @@
 package com.data.oai;
 
-import com.data.oai.common.author.ArxivAuthorEntity;
-import com.data.oai.common.paper.PaperDocumentEntity;
-import com.data.oai.common.record.RecordEntity;
-import com.data.oai.common.record.RecordRepository;
-import com.data.oai.common.section.SectionEntity;
-import com.data.oai.common.tracker.Tracker;
-import com.data.oai.common.tracker.TrackerRepository;
-import com.data.oai.common.dto.Record;
-import com.data.oai.common.dto.Section;
+import com.data.oai.generic.common.author.ArxivAuthorEntity;
+import com.data.oai.generic.common.paper.PaperDocumentEntity;
+import com.data.oai.generic.common.record.RecordEntity;
+import com.data.oai.generic.common.record.RecordRepository;
+import com.data.oai.generic.common.section.SectionEntity;
+import com.data.oai.generic.common.tracker.Tracker;
+import com.data.oai.generic.common.tracker.TrackerRepository;
+import com.data.oai.generic.common.dto.Record;
+import com.data.oai.generic.common.dto.Section;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.data.oai.common.tracker;
+package com.data.oai.generic.common.tracker;
 
 import com.data.oai.DataSource;
 import org.springframework.data.jpa.repository.JpaRepository;

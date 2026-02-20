@@ -1,6 +1,6 @@
 package com.data.oai;
 
-import com.data.oai.common.record.RecordEntity;
+import com.data.oai.generic.common.record.RecordEntity;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

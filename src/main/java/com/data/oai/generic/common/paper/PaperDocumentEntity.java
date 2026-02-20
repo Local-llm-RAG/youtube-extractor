@@ -1,7 +1,7 @@
-package com.data.oai.common.paper;
+package com.data.oai.generic.common.paper;
 
-import com.data.oai.common.record.RecordEntity;
-import com.data.oai.common.section.SectionEntity;
+import com.data.oai.generic.common.record.RecordEntity;
+import com.data.oai.generic.common.section.SectionEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;

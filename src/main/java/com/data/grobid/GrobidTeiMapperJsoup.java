@@ -1,7 +1,7 @@
 package com.data.grobid;
 
-import com.data.oai.common.dto.PaperDocument;
-import com.data.oai.common.dto.Section;
+import com.data.oai.generic.common.dto.PaperDocument;
+import com.data.oai.generic.common.dto.Section;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
