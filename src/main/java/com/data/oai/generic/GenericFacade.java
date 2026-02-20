@@ -16,6 +16,9 @@ import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,10 @@ public class GenericFacade {
     }
 
     public void processCollectedArxivRecord(Tracker tracker) {
+        processCollectedArxivRecord(tracker, null);
+    }
+
+    public void processCollectedArxivRecord(Tracker tracker, Set<String> onlyArxivIds) {
         OaiSourceHandler handler = sourceRegistry.get(tracker.getDataSource());
 
         Set<String> processedArxivIds = new java.util.HashSet<>(
@@ -55,8 +62,9 @@ public class GenericFacade {
 
         List<Record> unprocessed = allRecords.stream()
                 .peek(r -> r.setArxivId(Record.extractIdFromOai(r.getOaiIdentifier())))
-                .filter(r -> r.getArxivId() != null)
+                .filter(r -> nonNull(r.getArxivId()))
                 .filter(r -> !processedArxivIds.contains(r.getArxivId()))
+                .filter(r -> isNull(onlyArxivIds) || onlyArxivIds.contains(r.getArxivId()))
                 .toList();
 
         AtomicInteger processed = new AtomicInteger(tracker.getProcessedPapersForPeriod());
@@ -66,6 +74,7 @@ public class GenericFacade {
                 .toList();
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
         log.info("Processed {} records with GROBID", unprocessed.size());
     }
 

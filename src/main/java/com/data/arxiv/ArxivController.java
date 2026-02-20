@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static java.util.Objects.isNull;
 import static org.springframework.http.HttpStatus.OK;
 
 @RestController
@@ -20,8 +21,15 @@ public class ArxivController {
     public List<Paper> search(@RequestBody ArxivSearchRequest request) {
         log.info("GET /api/arxiv/search - start={} limit={}", request.getStart(), request.getLimit());
 
-        if (0 == request.getLimit()) {
+        Integer limit = request.getLimit();
+        Integer start = request.getStart();
+
+        if (isNull(limit) || limit < 1) {
             throw new IllegalArgumentException("limit must not be less than 1");
+        }
+
+        if (isNull(start) || start < 0) {
+            throw new IllegalArgumentException("start must not be less than 0");
         }
 
         return arxivService.search(request);

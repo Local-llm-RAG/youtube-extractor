@@ -21,4 +21,12 @@ public interface RecordRepository extends JpaRepository<RecordEntity, Long> {
     """)
     List<String> findArxivIdsProcessedInPeriodAndByDataSource(@Param("start") LocalDate start,
                                                @Param("end") LocalDate end, DataSource dataSource);
+
+    @Query("""
+    SELECT r.arxivId
+    FROM RecordEntity r
+    WHERE r.arxivId in :ids AND r.dataSource = :dataSource
+""")
+    List<String> findExistingArxivIds(@Param("ids") List<String> ids,
+                                      @Param("dataSource") DataSource dataSource);
 }
