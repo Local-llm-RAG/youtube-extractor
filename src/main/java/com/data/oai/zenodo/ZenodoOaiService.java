@@ -81,7 +81,6 @@ public class ZenodoOaiService {
      * - license: DataCite rightsURI (preferred) or rights text (normalized)
      * - categories: DataCite subjects
      * - authors: DataCite creators (family/given if present; else creatorName split)
-     * - comments: prefers descriptionType="Abstract", else first description
      */
     private Page parseDatacite(byte[] xmlBytes) {
         try {
@@ -97,17 +96,11 @@ public class ZenodoOaiService {
             String tag = null;
             String resumptionToken = null;
 
-            // creator temp
             String creatorName = null;
             String givenName = null;
             String familyName = null;
-
-            // identifier temp
             String identifierType = null;
 
-            // description temp (prefer Abstract)
-            String descriptionType = null;
-            String firstDescription = null;
             StringBuilder abstractDescription = null;
 
             while (r.hasNext()) {
@@ -120,8 +113,6 @@ public class ZenodoOaiService {
                     switch (name) {
                         case "record" -> {
                             cur = new Record();
-                            // reset record-level temps
-                            firstDescription = null;
                             abstractDescription = null;
                         }
                         case "header" -> inHeader = true;
@@ -129,7 +120,6 @@ public class ZenodoOaiService {
 
                         case "resumptionToken" -> tag = "token";
 
-                        // OAI header fields
                         case "identifier" -> {
                             if (inHeader) {
                                 tag = "headerIdentifier";
@@ -142,7 +132,6 @@ public class ZenodoOaiService {
                             if (inHeader) tag = "datestamp";
                         }
 
-                        // DataCite: creators
                         case "creator" -> {
                             if (inMetadata && cur != null) {
                                 inCreator = true;
@@ -160,13 +149,9 @@ public class ZenodoOaiService {
                         case "familyName" -> {
                             if (inCreator) tag = "familyName";
                         }
-
-                        // DataCite: subjects
                         case "subject" -> {
                             if (inMetadata) tag = "subject";
                         }
-
-                        // DataCite: rights (license)
                         case "rights" -> {
                             if (inMetadata && cur != null) {
                                 // Prefer rightsURI if present
@@ -174,19 +159,15 @@ public class ZenodoOaiService {
                                 if (rightsUri != null && !rightsUri.isBlank() && cur.getLicense() == null) {
                                     cur.setLicense(rightsUri);
                                 }
-                                tag = "rightsText"; // capture text too as fallback
+                                tag = "rightsText";
                             }
                         }
 
-                        // DataCite: descriptions (prefer Abstract)
                         case "description" -> {
                             if (inMetadata) {
-                                descriptionType = attrValue(se, "descriptionType"); // may be null
                                 tag = "description";
                             }
                         }
-
-                        // Optional: titles exist, but ArxivRecord doesn't have a title field.
                         case "title" -> {
                             if (inMetadata) tag = "title";
                         }
@@ -199,53 +180,37 @@ public class ZenodoOaiService {
                     text = text.trim();
                     if (text.isEmpty()) continue;
 
-                    // token is outside record sometimes; allow it
                     if (cur == null && !"token".equals(tag)) continue;
 
                     switch (tag) {
                         case "token" -> resumptionToken = text;
-
-                        // header
                         case "headerIdentifier" -> {
                             cur.setOaiIdentifier(text);
-                            // set recid immediately
                             if (cur.getArxivId() == null) {
-                                cur.setArxivId(extractZenodoRecId(text));
+                                cur.setArxivId(Record.extractZenodoRecId(text));
                             }
                         }
                         case "datestamp" -> cur.setDatestamp(text);
 
-                        // creators
                         case "creatorName" -> creatorName = text;
                         case "givenName" -> givenName = text;
                         case "familyName" -> familyName = text;
 
-                        // subjects -> categories
                         case "subject" -> cur.getCategories().add(text);
 
-                        // rights
                         case "rightsText" -> {
                             if (cur.getLicense() == null) cur.setLicense(text);
                         }
 
-                        // identifiers
                         case "dataciteIdentifier" -> {
                             if ("DOI".equalsIgnoreCase(identifierType)) {
                                 cur.setDoi(normalizeDoi(text));
                             }
                         }
 
-                        // descriptions -> comments (prefer Abstract)
                         case "description" -> {
-                            if (firstDescription == null) firstDescription = text;
-                            if ("Abstract".equalsIgnoreCase(descriptionType)) {
                                 if (abstractDescription == null) abstractDescription = new StringBuilder(text);
                                 else abstractDescription.append(text);
-                            }
-                        }
-
-                        case "title" -> {
-                            // no-op for now (ArxivRecord doesn't have a title field)
                         }
                     }
                 }
@@ -274,13 +239,11 @@ public class ZenodoOaiService {
                                         a.lastName = familyName;
                                         a.firstName = givenName;
                                     } else if (creatorName != null) {
-                                        // common formats: "Last, First" OR "First Last"
                                         String[] parts = creatorName.split(",", 2);
                                         if (parts.length == 2) {
                                             a.lastName = parts[0].trim();
                                             a.firstName = parts[1].trim();
                                         } else {
-                                            // fallback: last token as last name, rest as first name
                                             String[] tokens = creatorName.trim().split("\\s+");
                                             if (tokens.length == 1) {
                                                 a.lastName = creatorName;
@@ -306,7 +269,6 @@ public class ZenodoOaiService {
 
                         case "description" -> {
                             if ("description".equals(tag)) tag = null;
-                            descriptionType = null;
                         }
 
                         case "datestamp" -> {
@@ -319,29 +281,24 @@ public class ZenodoOaiService {
 
                         case "record" -> {
                             if (cur != null) {
-                                // finalize comments from descriptions
                                 if (cur.getComments() == null) {
-                                    String best = (abstractDescription != null) ? abstractDescription.toString() : firstDescription;
-                                    if (best != null && !best.isBlank()) cur.setComments(best);
+                                    if (abstractDescription != null && !abstractDescription.toString().isBlank()) cur.setComments(abstractDescription.toString());
                                 }
 
-                                // normalize license if present
                                 if (cur.getLicense() != null) cur.setLicense(normalizeLicense(cur.getLicense()));
 
-                                // ensure recid set
                                 if (cur.getArxivId() == null && cur.getOaiIdentifier() != null) {
-                                    cur.setArxivId(extractZenodoRecId(cur.getOaiIdentifier()));
+                                    cur.setArxivId(Record.extractZenodoRecId(cur.getOaiIdentifier()));
                                 }
 
                                 // apply license filter (same semantics as your arXiv service)
-                                if (isCommerciallyUsableLicense(cur.getLicense()) && isLikelyScholarlyText(cur)) {
+                                if (isCommerciallySafeForResale(cur.getLicense()) && isLikelyScholarlyText(cur)) {
                                     records.add(cur);
                                 }
                             }
                             cur = null;
 
                             // clear record-level temps
-                            firstDescription = null;
                             abstractDescription = null;
                         }
                     }
@@ -359,68 +316,82 @@ public class ZenodoOaiService {
         }
     }
 
-    private static String extractZenodoRecId(String oaiIdentifier) {
-        // Example: oai:zenodo.org:8435696
-        if (oaiIdentifier == null) return null;
-        int idx = oaiIdentifier.lastIndexOf(':');
-        return (idx >= 0) ? oaiIdentifier.substring(idx + 1) : oaiIdentifier;
-    }
-
     private static String normalizeDoi(String doi) {
         if (doi == null) return null;
         String d = doi.trim();
-
-        // common variants
-        d = d.replaceFirst("(?i)^https?://doi\\.org/", "");
-        d = d.replaceFirst("(?i)^doi:", "");
-        d = d.trim();
-
         return d.isEmpty() ? null : d;
     }
 
     private static String normalizeLicense(String license) {
         if (license == null) return null;
-        // normalize whitespace + http->https
-        String l = license.trim().replace("http://", "https://");
-        // drop trailing punctuation spaces etc
-        return l;
+        return license.trim().replace("http://", "https://");
     }
 
     private boolean isLikelyScholarlyText(Record r) {
-
-        // require at least one creator/author
         if (r.getAuthors().isEmpty()) return false;
-
-        // optional: require at least one subject keyword
         if (r.getCategories().isEmpty()) return false;
-
         return true;
     }
 
-    private boolean isCommerciallyUsableLicense(String license) {
-        if (license == null || license.isBlank()) return false;
+    private boolean isCommerciallySafeForResale(String license) {
+        if (license == null || license.isBlank()) {
+            return false;
+        }
 
-        String l = license.trim().toLowerCase(Locale.ROOT)
+        String l = license.trim()
+                .toLowerCase(Locale.ROOT)
                 .replace("http://", "https://");
 
-        // Accept common CC URLs
-        if (l.contains("creativecommons.org/licenses/by/4.0")) return true;
-        if (l.contains("creativecommons.org/licenses/by-sa/4.0")) return true;
-
-        // Only include ND if you explicitly allow ND for your use-case
-        if (l.contains("creativecommons.org/licenses/by-nd/4.0")) return true;
-
-        if (l.contains("creativecommons.org/publicdomain/zero/1.0")) return true;
-
-        // Accept common short forms / SPDX-ish forms
         String compact = l.replaceAll("\\s+", "")
                 .replace("_", "-");
 
-        return compact.contains("cc-by-4.0")
-                || compact.contains("cc-by-sa-4.0")
-                || compact.contains("cc-by-nd-4.0")
-                || compact.contains("cc0-1.0")
-                || compact.contains("cc0");
+        // ---------------------------------------------------
+        // EXPLICITLY REJECT
+        // ---------------------------------------------------
+        if (compact.contains("-nc")) return false;
+        if (compact.contains("-nd")) return false;
+        if (compact.contains("-sa")) return false;
+        if (compact.contains("gpl")) return false;
+        if (compact.contains("agpl")) return false;
+        if (compact.contains("lgpl")) return false;
+
+        // ---------------------------------------------------
+        // SAFE CREATIVE COMMONS
+        // ---------------------------------------------------
+        if (l.contains("creativecommons.org/publicdomain/zero/1.0"))
+            return true;
+        if (compact.equals("cc0") || compact.contains("cc0-1.0"))
+            return true;
+        if (l.contains("creativecommons.org/licenses/by/4.0"))
+            return true;
+
+        if (compact.contains("cc-by-4.0"))
+            return true;
+
+        // CC BY 3.0
+        if (l.contains("creativecommons.org/licenses/by/3.0"))
+            return true;
+
+        if (compact.contains("cc-by-3.0"))
+            return true;
+
+        // ---------------------------------------------------
+        // PERMISSIVE OSS LICENSES
+        // ---------------------------------------------------
+
+        if (compact.contains("mit"))
+            return true;
+
+        if (compact.contains("apache-2.0") || compact.contains("apache2"))
+            return true;
+
+        if (compact.contains("bsd-2-clause") || compact.contains("bsd-3-clause"))
+            return true;
+
+        if (compact.contains("isc"))
+            return true;
+
+        return false;
     }
 
     private static String attrValue(StartElement se, String attrLocalName) {

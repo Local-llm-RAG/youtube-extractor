@@ -29,4 +29,10 @@ public class Record {
         String id = (idx >= 0) ? oaiIdentifier.substring(idx + 1) : oaiIdentifier;
         return id.replaceAll("v\\d+$", "");
     }
+
+    public static String extractZenodoRecId(String oaiIdentifier) {
+        if (oaiIdentifier == null) return null;
+        int idx = oaiIdentifier.lastIndexOf(':');
+        return (idx >= 0) ? oaiIdentifier.substring(idx + 1) : oaiIdentifier;
+    }
 }
