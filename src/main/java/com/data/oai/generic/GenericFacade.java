@@ -1,5 +1,11 @@
 package com.data.oai.generic;
 
+import com.data.config.EmbeddingProperties;
+import com.data.embedding.RagSystemRestApiService;
+import com.data.embedding.dto.EmbeddingDto;
+import com.data.external.rest.pythonclient.RagSystemRestApiClient;
+import com.data.external.rest.pythonclient.dto.EmbedTranscriptRequest;
+import com.data.external.rest.pythonclient.dto.EmbeddingTask;
 import com.data.oai.DataSource;
 import com.data.oai.PaperInternalService;
 import com.data.oai.generic.common.tracker.Tracker;
@@ -27,6 +33,8 @@ public class GenericFacade {
     private final OaiSourceRegistry sourceRegistry;
     private final GrobidService grobidService;
     private final PaperInternalService paperInternalService;
+    private final RagSystemRestApiService ragService;
+    private final EmbeddingProperties embeddingProperties;
 
     private final ExecutorService grobidPool = Executors.newFixedThreadPool(2, r -> {
         Thread t = new Thread(r);
@@ -81,6 +89,7 @@ public class GenericFacade {
     private void processOne(OaiSourceHandler handler, Tracker tracker, Record r, AtomicInteger processed) {
         String arxivId = r.getArxivId();
 
+        EmbeddingDto embeddingInfo = null;
         try {
             byte[] pdf = handler.fetchPdfAndEnrich(r);
 
@@ -90,6 +99,7 @@ public class GenericFacade {
             }
 
             PaperDocument doc = grobidService.processGrobidDocument(arxivId, r.getOaiIdentifier(), pdf);
+            embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(doc.rawContent()));
             r.setDocument(doc);
 
         } catch (Exception e) {
@@ -97,7 +107,17 @@ public class GenericFacade {
         } finally {
             int newVal = processed.incrementAndGet();
             tracker.setProcessedPapersForPeriod(newVal);
-            paperInternalService.persistState(tracker, r);
+            paperInternalService.persistState(tracker, r, embeddingInfo);
         }
+    }
+
+    private EmbedTranscriptRequest buildEmbedTranscriptRequest(String transcriptText) {
+        return EmbedTranscriptRequest.builder()
+                .text(transcriptText)
+                .task(EmbeddingTask.RETRIEVAL_PASSAGE.getValue())
+                .chunkTokens(embeddingProperties.chunkSize())
+                .chunkOverlap(embeddingProperties.overlap())
+                .normalize(embeddingProperties.normalize())
+                .build();
     }
 }

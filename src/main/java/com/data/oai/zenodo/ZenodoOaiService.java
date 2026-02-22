@@ -311,7 +311,13 @@ public class ZenodoOaiService {
     private static String normalizeDoi(String doi) {
         if (doi == null) return null;
         String d = doi.trim();
-        return d.isEmpty() ? null : d;
+
+        d = d.replaceFirst("(?i)^https?://doi\\.org/", "");
+        d = d.replaceFirst("(?i)^doi:\\s*", "");
+        d = d.replaceAll("[\\s\\p{Punct}]+$", "");
+        d = d.toLowerCase(Locale.ROOT);
+
+        return d.isBlank() ? null : d;
     }
 
     private static String normalizeLicense(String license) {

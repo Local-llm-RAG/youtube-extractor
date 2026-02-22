@@ -13,7 +13,7 @@ public record PaperDocument(
         List<String> keywords,
         List<String> affiliation,
         List<String> classCodes,
-        List<String> references,
+        List<Reference> references,
         String docType) {
     public PaperDocument {
         sections = (sections == null || sections.isEmpty())

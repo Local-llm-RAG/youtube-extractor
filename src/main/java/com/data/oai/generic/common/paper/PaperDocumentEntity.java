@@ -1,5 +1,7 @@
 package com.data.oai.generic.common.paper;
 
+import com.data.jpa.dao.EmbedTranscriptChunkEntity;
+import com.data.jpa.dao.ReferenceMentionEntity;
 import com.data.oai.generic.common.record.RecordEntity;
 import com.data.oai.generic.common.section.SectionEntity;
 import jakarta.persistence.*;
@@ -58,15 +60,19 @@ public class PaperDocumentEntity {
     private List<String> affiliations;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(name = "reference_list", columnDefinition = "text[]")
-    private List<String> references;
-
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "class_code_list", columnDefinition = "text[]")
     private List<String> classCodes;
 
     @Column(name = "doc_type", columnDefinition = "text")
     private String docType;
+
+    @OneToMany(
+            mappedBy = "document",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderBy("refIndex ASC")
+    private List<ReferenceMentionEntity> references = new ArrayList<>();
 
     @OneToMany(
         mappedBy = "document",
@@ -76,6 +82,13 @@ public class PaperDocumentEntity {
     @OrderColumn(name = "pos")
     private List<SectionEntity> sections = new ArrayList<>();
 
+    @OneToMany(
+            mappedBy = "document",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<EmbedTranscriptChunkEntity> embeddings = new ArrayList<>();
+
     public void addSection(SectionEntity section) {
         sections.add(section);
         section.setDocument(this);
@@ -84,5 +97,25 @@ public class PaperDocumentEntity {
     public void removeSection(SectionEntity section) {
         sections.remove(section);
         section.setDocument(null);
+    }
+
+    public void addReference(ReferenceMentionEntity ref) {
+        references.add(ref);
+        ref.setDocument(this);
+    }
+
+    public void removeReference(ReferenceMentionEntity ref) {
+        references.remove(ref);
+        ref.setDocument(null);
+    }
+
+    public void addEmbedding(EmbedTranscriptChunkEntity emb) {
+        embeddings.add(emb);
+        emb.setDocument(this);
+    }
+
+    public void removeEmbedding(EmbedTranscriptChunkEntity emb) {
+        embeddings.remove(emb);
+        emb.setDocument(null);
     }
 }

@@ -1,6 +1,7 @@
 package com.data.grobid;
 
 import com.data.oai.generic.common.dto.PaperDocument;
+import com.data.oai.generic.common.dto.Reference;
 import com.data.oai.generic.common.dto.Section;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -29,7 +30,7 @@ public final class GrobidTeiMapperJsoup {
         List<String> keywords = extractKeywords(tei);
         List<String> affiliation = extractAffiliations(tei);
         List<String> classCodes = extractClassCodes(tei);
-        List<String> references = extractReferences(tei);
+        List<Reference> references = extractReferences(tei);
         String docType = extractDocType(tei);
 
         List<Section> sections = extractSections(tei);
@@ -127,40 +128,59 @@ public final class GrobidTeiMapperJsoup {
         return out.stream().distinct().toList();
     }
 
-    private static List<String> extractReferences(Document tei) {
-        List<String> references = new ArrayList<>();
+    public static List<Reference> extractReferences(Document tei) {
+        List<Reference> out = new ArrayList<>();
+        int idx = 0;
 
         for (Element bibl : tei.select("back listBibl biblStruct")) {
+            idx++;
 
-            Element analyticTitle = bibl.selectFirst("analytic > title");
-            if (analyticTitle != null && !analyticTitle.text().isBlank()) {
-                references.add(normalizeWs(analyticTitle.text()));
+            String analyticTitle = textOrNull(bibl.selectFirst("analytic > title"));
+            String monogrTitle   = textOrNull(bibl.selectFirst("monogr > title"));
+
+            String bestTitle = !isBlank(analyticTitle) ? analyticTitle : monogrTitle;
+
+            String doi = extractDoi(bibl);
+
+            List<String> urls = bibl.select("ptr[target]")
+                    .stream()
+                    .map(e -> normalizeWs(e.attr("target")))
+                    .filter(s -> !s.isBlank())
+                    .distinct()
+                    .toList();
+
+            List<String> authors = bibl.select("author persName")
+                    .eachText()
+                    .stream()
+                    .map(GrobidTeiMapperJsoup::normalizeWs)
+                    .filter(s -> !s.isBlank())
+                    .distinct()
+                    .toList();
+
+            String year = null;
+            Element date = bibl.selectFirst("date[when], imprint date[when], imprint date");
+            if (date != null) {
+                year = normalizeWs(date.hasAttr("when") ? date.attr("when") : date.text());
+                if (year.length() >= 4) year = year.substring(0, 4);
             }
 
-            Element monogrTitle = bibl.selectFirst("monogr > title");
-            if (monogrTitle != null && !monogrTitle.text().isBlank()) {
-                references.add(normalizeWs(monogrTitle.text()));
-            }
+            String venue = textOrNull(bibl.selectFirst("monogr > title, monogr imprint publisher, monogr imprint pubPlace"));
 
-            for (Element idno : bibl.select("idno")) {
-                String val = normalizeWs(idno.text());
+            Map<String, String> idnos = new LinkedHashMap<>();
+            for (Element idnoEl : bibl.select("idno")) {
+                String type = normalizeWs(idnoEl.attr("type"));
+                String val  = normalizeWs(idnoEl.text());
                 if (!val.isBlank()) {
-                    references.add(val);
+                    idnos.put(type.isBlank() ? "unknown" : type.toLowerCase(Locale.ROOT), val);
                 }
             }
 
-            // URLs
-            for (Element ptr : bibl.select("ptr[target]")) {
-                String target = ptr.attr("target");
-                if (!target.isBlank()) {
-                    references.add(target.trim());
-                }
-            }
+            if (isBlank(bestTitle) && isBlank(doi) && urls.isEmpty() && authors.isEmpty()) continue;
+
+            out.add(new Reference(idx, analyticTitle, monogrTitle, normalizeDoi(doi), urls, authors, year, venue, idnos));
         }
 
-        return references.stream()
-                .distinct()
-                .toList();
+        return out;
     }
 
     /**
@@ -293,6 +313,34 @@ public final class GrobidTeiMapperJsoup {
             }
         }
         return sb.toString().trim();
+    }
+
+    private static String normalizeDoi(String doi) {
+        if (doi == null) return null;
+        String d = doi.trim();
+
+        d = d.replaceFirst("(?i)^https?://doi\\.org/", "");
+        d = d.replaceFirst("(?i)^doi:\\s*", "");
+        d = d.replaceAll("[\\s\\p{Punct}]+$", "");
+        d = d.toLowerCase(Locale.ROOT);
+
+        return d.isBlank() ? null : d;
+    }
+
+    private static String extractDoi(Element bibl) {
+        Element doiEl = bibl.selectFirst("idno[type=DOI], idno[type=doi]");
+        if (doiEl != null) return doiEl.text();
+        for (Element idno : bibl.select("idno")) {
+            String v = normalizeWs(idno.text());
+            if (v.toLowerCase(Locale.ROOT).startsWith("10.")) return v;
+        }
+        return null;
+    }
+
+    private static String textOrNull(Element el) {
+        if (el == null) return null;
+        String t = normalizeWs(el.text());
+        return t.isBlank() ? null : t;
     }
 
     private static String joinBlocks(String a, String b) {

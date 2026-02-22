@@ -1,6 +1,12 @@
 package com.data.oai;
 
+import com.data.embedding.dto.EmbeddingDto;
+import com.data.jpa.dao.EmbedTranscriptChunkEntity;
+import com.data.jpa.dao.ReferenceMentionEntity;
+import com.data.jpa.repository.EmbedTranscriptChunkRepository;
+import com.data.oai.generic.EmbeddingMapper;
 import com.data.oai.generic.common.author.ArxivAuthorEntity;
+import com.data.oai.generic.common.dto.Reference;
 import com.data.oai.generic.common.paper.PaperDocumentEntity;
 import com.data.oai.generic.common.record.RecordEntity;
 import com.data.oai.generic.common.record.RecordRepository;
@@ -28,6 +34,7 @@ import java.util.stream.IntStream;
 public class PaperInternalService {
     private final TrackerRepository trackerRepository;
     private final RecordRepository recordRepository;
+    private final EmbedTranscriptChunkRepository embedTranscriptChunkRepository;
 
     public Tracker getTracker(LocalDate startDate, DataSource dataSource) {
         Optional<Tracker> trackerForDate = trackerRepository.findByDateStartAndDataSource(startDate, dataSource);
@@ -49,33 +56,47 @@ public class PaperInternalService {
     }
 
     @Transactional
-    public void persistState(Tracker tracker, Record r) {
+    public void persistState(Tracker tracker, Record r, EmbeddingDto embeddingInfo) {
         persistTracker(tracker);
 
-        persistRecord(r, tracker.getDataSource());
+        persistRecord(r, tracker.getDataSource(), embeddingInfo);
     }
 
-    private void persistRecord(Record r, DataSource dataSource) {
-        RecordEntity record = RecordEntity.builder()
-                .arxivId(r.getArxivId())
-                .oaiIdentifier(r.getOaiIdentifier())
-                .datestamp(r.getDatestamp() == null ? null : Instant.parse(r.getDatestamp())
+    private void persistRecord(Record recordFromApi, DataSource dataSource, EmbeddingDto embeddingInfo) {
+        RecordEntity dbRecord = createDatabaseRecord(recordFromApi, dataSource);
+        addPaperDocument(recordFromApi, dbRecord, embeddingInfo);
+        addCategories(recordFromApi, dbRecord);
+        addAuthors(recordFromApi, dbRecord);
+        recordRepository.save(dbRecord);
+    }
+
+    private static void addCategories(Record recordFromApi, RecordEntity dbRecord) {
+        dbRecord.getCategories().addAll(recordFromApi.getCategories());
+    }
+
+    private static RecordEntity createDatabaseRecord(Record recordFromApi, DataSource dataSource) {
+        return RecordEntity.builder()
+                .arxivId(recordFromApi.getArxivId())
+                .oaiIdentifier(recordFromApi.getOaiIdentifier())
+                .datestamp(recordFromApi.getDatestamp() == null ? null :
+                        Instant.parse(recordFromApi.getDatestamp())
                                 .atZone(ZoneOffset.UTC)
                                 .toLocalDate())
-                .comments(r.getComments())
-                .journalRef(r.getJournalRef())
-                .doi(r.getDoi())
-                .license(r.getLicense())
+                .comments(recordFromApi.getComments())
+                .journalRef(recordFromApi.getJournalRef())
+                .doi(recordFromApi.getDoi())
+                .license(recordFromApi.getLicense())
                 .categories(new ArrayList<>())
                 .authors(new ArrayList<>())
                 .dataSource(dataSource)
                 .build();
-        record.getCategories().addAll(r.getCategories());
-        IntStream.range(0, r.getAuthors().size())
-                .forEach(i -> {
-                    var a = r.getAuthors().get(i);
+    }
 
-                    record.addAuthor(
+    private static void addAuthors(Record recordFromApi, RecordEntity dbRecord) {
+        IntStream.range(0, recordFromApi.getAuthors().size())
+                .forEach(i -> {
+                    var a = recordFromApi.getAuthors().get(i);
+                    dbRecord.addAuthor(
                             ArxivAuthorEntity.builder()
                                     .firstName(a.getFirstName())
                                     .lastName(a.getLastName())
@@ -83,38 +104,77 @@ public class PaperInternalService {
                                     .build()
                     );
                 });
+    }
 
-        if (r.getDocument() != null) {
-            var doc = PaperDocumentEntity.builder()
-                    .title(r.getDocument().title())
-                    .abstractText(r.getDocument().abstractText())
-                    .teiXmlRaw(r.getDocument().teiXml())
-                    .rawContent(r.getDocument().rawContent())
-                    .keywords(r.getDocument().keywords())
-                    .affiliations(r.getDocument().affiliation())
-                    .classCodes(r.getDocument().classCodes())
-                    .references(r.getDocument().references())
-                    .docType(r.getDocument().docType())
-                    .sections(new ArrayList<>())
-                    .build();
+    private static void addPaperDocument(Record apiRecord, RecordEntity dbRecord, EmbeddingDto embeddingInfo) {
+        if (apiRecord.getDocument() == null) return;
+        PaperDocumentEntity doc = PaperDocumentEntity.builder()
+                .title(apiRecord.getDocument().title())
+                .abstractText(apiRecord.getDocument().abstractText())
+                .teiXmlRaw(apiRecord.getDocument().teiXml())
+                .rawContent(apiRecord.getDocument().rawContent())
+                .keywords(apiRecord.getDocument().keywords())
+                .affiliations(apiRecord.getDocument().affiliation())
+                .classCodes(apiRecord.getDocument().classCodes())
+                .docType(apiRecord.getDocument().docType())
+                .sections(new ArrayList<>())
+                .references(new ArrayList<>())
+                .embeddings(new ArrayList<>())
+                .build();
+        addSections(apiRecord, doc);
+        addReferences(apiRecord, doc);
+        addEmbeddings(embeddingInfo, dbRecord);
+        dbRecord.setDocument(doc);
+    }
 
-            List<Section> sections = r.getDocument().sections();
-
-            for (int i = 0; i < sections.size(); i++) {
-                var s = sections.get(i);
-
-                doc.addSection(
-                        SectionEntity.builder()
-                                .title(s.title())
-                                .level(s.level())
-                                .text(s.text())
-                                .pos(i)
-                                .build()
-                );
-            }
-            record.setDocument(doc);
+    private static void addSections(Record r, PaperDocumentEntity doc) {
+        List<Section> sections = r.getDocument().sections();
+        for (int i = 0; i < sections.size(); i++) {
+            var s = sections.get(i);
+            doc.addSection(
+                    SectionEntity.builder()
+                            .title(s.title())
+                            .level(s.level())
+                            .text(s.text())
+                            .pos(i)
+                            .build()
+            );
         }
-        recordRepository.save(record);
+    }
+
+    private static void addReferences(Record r, PaperDocumentEntity doc) {
+        List<Reference> refs = r.getDocument().references();
+        for (int index = 0; index < refs.size(); index++) {
+            Reference ref = refs.get(index);
+
+            String title = ref.analyticTitle() != null && !ref.analyticTitle().isBlank()
+                    ? ref.analyticTitle()
+                    : ref.monogrTitle();
+
+            List<String> idnosFlat = ref.idnos() == null
+                    ? List.of()
+                    : ref.idnos().entrySet().stream()
+                    .map(e -> e.getKey() + ":" + e.getValue())
+                    .toList();
+
+            doc.addReference(
+                    ReferenceMentionEntity.builder()
+                            .refIndex(index)
+                            .title(title)
+                            .doi(ref.doi())
+                            .year(ref.year())
+                            .venue(ref.venue())
+                            .authors(ref.authors())
+                            .urls(ref.urls())
+                            .idnos(idnosFlat)
+                            .build()
+            );
+        }
+    }
+
+    private static void addEmbeddings(EmbeddingDto embeddingInfo, RecordEntity dbRecord) {
+        List<EmbedTranscriptChunkEntity> chunks = EmbeddingMapper.toEntity(dbRecord.getDocument(), embeddingInfo);
+        chunks.forEach(chunk -> dbRecord.getDocument().addEmbedding(chunk));
     }
 
     public void persistTracker(Tracker tracker) {
