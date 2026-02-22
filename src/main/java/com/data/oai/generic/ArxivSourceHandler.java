@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.AbstractMap;
 import java.util.List;
 
 @Component
@@ -29,7 +30,7 @@ public class ArxivSourceHandler implements OaiSourceHandler {
     }
 
     @Override
-    public byte[] fetchPdfAndEnrich(Record record) {
+    public AbstractMap.SimpleEntry<String, byte[]> fetchPdfAndEnrich(Record record) {
         return arxivOaiService.getPdf(record.getArxivId());
     }
 }

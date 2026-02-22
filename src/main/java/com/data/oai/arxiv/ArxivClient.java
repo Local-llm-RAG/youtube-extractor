@@ -33,8 +33,8 @@ public class ArxivClient {
                 .body(byte[].class);
     }
 
-    public byte[] getPdf(String arxivId) {
-        URI pdfUri = URI.create("https://arxiv.org/pdf/" + arxivId + ".pdf");
+    public byte[] getPdf(String pdfUrl) {
+        URI pdfUri = URI.create(pdfUrl);
         return rest.get().uri(pdfUri).retrieve().body(byte[].class);
     }
 

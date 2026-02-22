@@ -85,6 +85,10 @@ public class RecordEntity {
     @Column(name = "data_source", nullable = false)
     @Enumerated(EnumType.STRING)
     private DataSource dataSource;
+
+    @Column(name = "pdf_url", nullable = false)
+    private String pdfUrl;
+
     @PrePersist
     void prePersist() {
         var now = OffsetDateTime.now();

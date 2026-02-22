@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.AbstractMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -86,28 +87,28 @@ public class GenericFacade {
         log.info("Processed {} records with GROBID", unprocessed.size());
     }
 
-    private void processOne(OaiSourceHandler handler, Tracker tracker, Record r, AtomicInteger processed) {
-        String arxivId = r.getArxivId();
+    private void processOne(OaiSourceHandler handler, Tracker tracker, Record apiRecord, AtomicInteger processed) {
+        String arxivId = apiRecord.getArxivId();
 
         EmbeddingDto embeddingInfo = null;
+        AbstractMap.SimpleEntry<String, byte[]> urlWithContent = handler.fetchPdfAndEnrich(apiRecord);
         try {
-            byte[] pdf = handler.fetchPdfAndEnrich(r);
-
-            if (pdf == null || pdf.length == 0) {
+            byte[] pdfContent = urlWithContent.getValue();
+            if (pdfContent == null || pdfContent.length == 0) {
                 log.warn("Empty PDF for {}", arxivId);
                 return;
             }
 
-            PaperDocument doc = grobidService.processGrobidDocument(arxivId, r.getOaiIdentifier(), pdf);
+            PaperDocument doc = grobidService.processGrobidDocument(arxivId, apiRecord.getOaiIdentifier(), pdfContent);
             embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(doc.rawContent()));
-            r.setDocument(doc);
+            apiRecord.setDocument(doc);
 
         } catch (Exception e) {
             log.warn("Failed to process arXivId={} with GROBID", arxivId, e);
         } finally {
             int newVal = processed.incrementAndGet();
             tracker.setProcessedPapersForPeriod(newVal);
-            paperInternalService.persistState(tracker, r, embeddingInfo);
+            paperInternalService.persistState(tracker, apiRecord, embeddingInfo, urlWithContent.getKey());
         }
     }
 

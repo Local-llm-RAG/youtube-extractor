@@ -10,6 +10,7 @@ import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.events.XMLEvent;
 import java.io.ByteArrayInputStream;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -38,8 +39,9 @@ public class ArxivOaiService {
         return collectedRecords;
     }
 
-    public byte[] getPdf(String arxivId) {
-        return arxivClient.getPdf(arxivId);
+    public AbstractMap.SimpleEntry<String, byte[]> getPdf(String arxivId) {
+        String pdfUrl = "https://arxiv.org/pdf/" + arxivId + ".pdf";
+        return new AbstractMap.SimpleEntry<>(pdfUrl, arxivClient.getPdf(pdfUrl));
     }
 
     public byte[] getEText(String arxivId) {

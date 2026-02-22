@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.AbstractMap;
 import java.util.List;
 
 @Component
@@ -31,10 +32,10 @@ public class ZenodoSourceHandler implements OaiSourceHandler {
     }
 
     @Override
-    public byte[] fetchPdfAndEnrich(Record record) {
+    public AbstractMap.SimpleEntry<String, byte[]> fetchPdfAndEnrich(Record record) {
         var map = zenodoOaiService.getPdf(record.getArxivId());
         ZenodoRecord zenodoRecord = map.getKey();
         record.setLanguage(zenodoRecord.getMetadata().getLanguage());
-        return map.getValue();
+        return new AbstractMap.SimpleEntry<>(zenodoRecord.getLinks().getSelf(), map.getValue());
     }
 }

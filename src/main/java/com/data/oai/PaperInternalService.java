@@ -56,14 +56,14 @@ public class PaperInternalService {
     }
 
     @Transactional
-    public void persistState(Tracker tracker, Record r, EmbeddingDto embeddingInfo) {
+    public void persistState(Tracker tracker, Record r, EmbeddingDto embeddingInfo, String pdfUrl) {
         persistTracker(tracker);
 
-        persistRecord(r, tracker.getDataSource(), embeddingInfo);
+        persistRecord(r, tracker.getDataSource(), embeddingInfo, pdfUrl);
     }
 
-    private void persistRecord(Record recordFromApi, DataSource dataSource, EmbeddingDto embeddingInfo) {
-        RecordEntity dbRecord = createDatabaseRecord(recordFromApi, dataSource);
+    private void persistRecord(Record recordFromApi, DataSource dataSource, EmbeddingDto embeddingInfo, String pdfUrl) {
+        RecordEntity dbRecord = createDatabaseRecord(recordFromApi, dataSource, pdfUrl);
         addPaperDocument(recordFromApi, dbRecord, embeddingInfo);
         addCategories(recordFromApi, dbRecord);
         addAuthors(recordFromApi, dbRecord);
@@ -74,7 +74,7 @@ public class PaperInternalService {
         dbRecord.getCategories().addAll(recordFromApi.getCategories());
     }
 
-    private static RecordEntity createDatabaseRecord(Record recordFromApi, DataSource dataSource) {
+    private static RecordEntity createDatabaseRecord(Record recordFromApi, DataSource dataSource, String pdfUrl) {
         return RecordEntity.builder()
                 .arxivId(recordFromApi.getArxivId())
                 .oaiIdentifier(recordFromApi.getOaiIdentifier())
@@ -89,6 +89,7 @@ public class PaperInternalService {
                 .categories(new ArrayList<>())
                 .authors(new ArrayList<>())
                 .dataSource(dataSource)
+                .pdfUrl(pdfUrl)
                 .build();
     }
 

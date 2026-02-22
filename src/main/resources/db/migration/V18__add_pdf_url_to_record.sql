@@ -1,0 +1,2 @@
+ALTER TABLE source_record
+    ADD COLUMN IF NOT EXISTS pdf_url VARCHAR (255);

@@ -4,6 +4,7 @@ import com.data.oai.DataSource;
 import com.data.oai.generic.common.dto.Record;
 
 import java.time.LocalDateTime;
+import java.util.AbstractMap;
 import java.util.List;
 
 public interface OaiSourceHandler {
@@ -12,5 +13,5 @@ public interface OaiSourceHandler {
 
     List<Record> fetchMetadata(LocalDateTime startInclusive, LocalDateTime endInclusive);
 
-    byte[] fetchPdfAndEnrich(Record record);
+    AbstractMap.SimpleEntry<String, byte[]> fetchPdfAndEnrich(Record record);
 }
