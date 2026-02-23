@@ -1,4 +1,4 @@
-package com.data.config;
+package com.data.config.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

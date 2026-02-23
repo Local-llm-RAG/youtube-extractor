@@ -41,7 +41,7 @@ public class ArxivGPTCostEstimator {
     }
 
     private Stream<LangText> arxivTexts(String arxivId, SectionFilter filter) {
-        RecordEntity record = papersRepository.findByArxivId(arxivId).orElseThrow(() -> new RuntimeException("Arxiv record not found"));
+        RecordEntity record = papersRepository.findBySourceId(arxivId).orElseThrow(() -> new RuntimeException("Arxiv record not found"));
 
         if (isNull(record.getDocument()) || isNull(record.getDocument().getSections()) || record.getDocument().getSections().isEmpty()) {
             String fallback = buildMetadataText(record);

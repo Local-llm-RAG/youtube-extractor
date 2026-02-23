@@ -1,9 +1,8 @@
 package com.data.oai.generic;
 
-import com.data.config.EmbeddingProperties;
+import com.data.config.properties.EmbeddingProperties;
 import com.data.embedding.RagSystemRestApiService;
 import com.data.embedding.dto.EmbeddingDto;
-import com.data.external.rest.pythonclient.RagSystemRestApiClient;
 import com.data.external.rest.pythonclient.dto.EmbedTranscriptRequest;
 import com.data.external.rest.pythonclient.dto.EmbeddingTask;
 import com.data.oai.DataSource;
@@ -12,13 +11,17 @@ import com.data.oai.generic.common.tracker.Tracker;
 import com.data.oai.generic.common.dto.Record;
 import com.data.oai.generic.common.dto.PaperDocument;
 import com.data.grobid.GrobidService;
+import com.optimaize.langdetect.i18n.LdLocale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.language.detect.LanguageDetector;
+import org.apache.tika.language.detect.LanguageResult;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +39,7 @@ public class GenericFacade {
     private final PaperInternalService paperInternalService;
     private final RagSystemRestApiService ragService;
     private final EmbeddingProperties embeddingProperties;
+    private final LanguageDetector languageDetector;
 
     private final ExecutorService grobidPool = Executors.newFixedThreadPool(2, r -> {
         Thread t = new Thread(r);
@@ -55,7 +59,7 @@ public class GenericFacade {
     public void processCollectedArxivRecord(Tracker tracker, Set<String> onlyArxivIds) {
         OaiSourceHandler handler = sourceRegistry.get(tracker.getDataSource());
 
-        Set<String> processedArxivIds = new java.util.HashSet<>(
+        Set<String> processedPaperIds = new java.util.HashSet<>(
                 paperInternalService.findArxivIdsProcessedInPeriod(
                         tracker.getDateStart(),
                         tracker.getDateEnd(),
@@ -64,18 +68,18 @@ public class GenericFacade {
         );
 
         List<Record> allRecords = handler.fetchMetadata(
-                tracker.getDateStart().atStartOfDay(),
-                tracker.getDateEnd().atStartOfDay());
+                tracker.getDateStart(),
+                tracker.getDateEnd());
 
         tracker.setAllPapersForPeriod(allRecords.size());
 
         List<Record> unprocessed = allRecords.stream()
-                .peek(r -> r.setArxivId(Record.extractIdFromOai(r.getOaiIdentifier())))
-                .filter(r -> nonNull(r.getArxivId()))
-                .filter(r -> !processedArxivIds.contains(r.getArxivId()))
-                .filter(r -> isNull(onlyArxivIds) || onlyArxivIds.contains(r.getArxivId()))
+                .peek(r -> r.setSourceId(Record.extractIdFromOai(r.getOaiIdentifier())))
+                .filter(r -> nonNull(r.getSourceId()))
+                .filter(r -> !processedPaperIds.contains(r.getSourceId()))
+                .filter(r -> isNull(onlyArxivIds) || onlyArxivIds.contains(r.getSourceId()))
                 .toList();
-
+        tracker.setProcessedPapersForPeriod(allRecords.size() - unprocessed.size());
         AtomicInteger processed = new AtomicInteger(tracker.getProcessedPapersForPeriod());
 
         List<CompletableFuture<Void>> futures = unprocessed.stream()
@@ -88,27 +92,45 @@ public class GenericFacade {
     }
 
     private void processOne(OaiSourceHandler handler, Tracker tracker, Record apiRecord, AtomicInteger processed) {
-        String arxivId = apiRecord.getArxivId();
+        String sourceId = apiRecord.getSourceId();
 
-        EmbeddingDto embeddingInfo = null;
-        AbstractMap.SimpleEntry<String, byte[]> urlWithContent = handler.fetchPdfAndEnrich(apiRecord);
         try {
+            AbstractMap.SimpleEntry<String, byte[]> urlWithContent = handler.fetchPdfAndEnrich(apiRecord);
             byte[] pdfContent = urlWithContent.getValue();
             if (pdfContent == null || pdfContent.length == 0) {
-                log.warn("Empty PDF for {}", arxivId);
-                return;
+                throw new RuntimeException("Empty or no pdf content found for %s".formatted(sourceId));
             }
 
-            PaperDocument doc = grobidService.processGrobidDocument(arxivId, apiRecord.getOaiIdentifier(), pdfContent);
-            embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(doc.rawContent()));
-            apiRecord.setDocument(doc);
-
+            PaperDocument grobidDoc = grobidService.processGrobidDocument(sourceId, apiRecord.getOaiIdentifier(), pdfContent);
+            apiRecord.setLanguage(detectLang(grobidDoc.title() + " " + grobidDoc.abstractText(), sourceId));
+//            EmbeddingDto embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(grobidDoc.rawContent()));
+            EmbeddingDto embeddingInfo = EmbeddingDto.builder().build();
+            paperInternalService.persistState(
+                    tracker.getDataSource(),
+                    apiRecord,
+                    grobidDoc,
+                    embeddingInfo,
+                    urlWithContent.getKey());
         } catch (Exception e) {
-            log.warn("Failed to process arXivId={} with GROBID", arxivId, e);
+            log.warn("Failed to process arXivId={} with GROBID", sourceId, e);
         } finally {
             int newVal = processed.incrementAndGet();
             tracker.setProcessedPapersForPeriod(newVal);
-            paperInternalService.persistState(tracker, apiRecord, embeddingInfo, urlWithContent.getKey());
+            paperInternalService.persistTracker(tracker);
+        }
+    }
+
+    private String detectLang(String text, String sourceId) {
+        try {
+            LanguageResult result = languageDetector.detect(text);
+            if (result.isUnknown()) {
+                log.warn("Unknown language for sourceId={}", sourceId);
+                return "en";
+            }
+            return result.getLanguage();
+        } catch (Exception e) {
+            log.error("Language detection failed for sourceId={}", sourceId, e);
+            return "en";
         }
     }
 

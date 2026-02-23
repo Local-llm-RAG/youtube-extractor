@@ -30,6 +30,8 @@ public class GrobidClient {
         mb.part("consolidateHeader", "1");
         mb.part("consolidateCitations", "1");
         mb.part("segmentSentences", "1");
+        mb.part("includeRawCitations", "1");
+        mb.part("includeRawAffiliations", "1");
         return mb;
     }
 }

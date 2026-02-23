@@ -22,7 +22,7 @@ public class OAIProcessorService implements Job {
 
     @Override
     public void execute(JobExecution execution) {
-        List.of(DataSource.ZENODO)
+        List.of(DataSource.ARXIV)
                 .forEach(dataSource -> {
                     IntStream
                             .iterate(0, i -> i + 1) // iterate eternally

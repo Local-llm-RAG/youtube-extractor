@@ -13,6 +13,6 @@ public interface PapersRepository extends JpaRepository<RecordEntity, Long> { //
             "document",
             "document.sections"
     })
-    Optional<RecordEntity> findByArxivId(String arxivId);
+    Optional<RecordEntity> findBySourceId(String arxivId);
 
 }

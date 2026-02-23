@@ -1,4 +1,4 @@
-package com.data.config;
+package com.data.config.properties;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

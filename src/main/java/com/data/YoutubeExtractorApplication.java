@@ -1,6 +1,6 @@
 package com.data;
 
-import com.data.config.*;
+import com.data.config.properties.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

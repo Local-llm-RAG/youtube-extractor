@@ -4,10 +4,11 @@ import com.data.oai.DataSource;
 import com.data.oai.generic.common.dto.Record;
 import com.data.oai.zenodo.ZenodoOaiService;
 import com.data.oai.zenodo.ZenodoRecord;
+import com.data.oai.zenodo.ZenodoRecordFilePicker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.List;
 
@@ -23,19 +24,19 @@ public class ZenodoSourceHandler implements OaiSourceHandler {
     }
 
     @Override
-    public List<Record> fetchMetadata(LocalDateTime startInclusive, LocalDateTime endInclusive) {
+    public List<Record> fetchMetadata(LocalDate startInclusive, LocalDate endInclusive) {
         // keep your current "plusHours" semantics
         return zenodoOaiService.getZenodoPapersMetadata(
-                startInclusive.plusHours(1).toString(),
-                startInclusive.plusHours(2).toString()
+                startInclusive.toString(),
+                endInclusive.toString()
         );
     }
 
     @Override
     public AbstractMap.SimpleEntry<String, byte[]> fetchPdfAndEnrich(Record record) {
-        var map = zenodoOaiService.getPdf(record.getArxivId());
+        var map = zenodoOaiService.getPdf(record.getSourceId());
         ZenodoRecord zenodoRecord = map.getKey();
-        record.setLanguage(zenodoRecord.getMetadata().getLanguage());
-        return new AbstractMap.SimpleEntry<>(zenodoRecord.getLinks().getSelf(), map.getValue());
+        ZenodoRecord.FileEntry pdf = ZenodoRecordFilePicker.pickPdfUrl(zenodoRecord);
+        return new AbstractMap.SimpleEntry<>(pdf.getLinks().getSelf(), map.getValue());
     }
 }

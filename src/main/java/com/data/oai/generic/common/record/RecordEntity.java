@@ -31,7 +31,7 @@ public class RecordEntity {
     private Long id;
 
     @Column(name = "source_identifier", nullable = false, length = 64)
-    private String arxivId;
+    private String sourceId;
 
     @Column(name = "oai_identifier", length = 255)
     private String oaiIdentifier;
@@ -50,6 +50,9 @@ public class RecordEntity {
 
     @Column(name = "license", length = 255)
     private String license;
+
+    @Column(name = "language")
+    private String language;
 
     @ElementCollection
     @CollectionTable(

@@ -29,7 +29,7 @@ public class SectionEntity {
     )
     private PaperDocumentEntity document;
 
-    @Column(name = "title", nullable = false, length = 512)
+    @Column(name = "title", nullable = false)
     private String title = "UNTITLED";
 
     @Column(name = "level")

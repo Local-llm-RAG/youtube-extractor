@@ -1,6 +1,6 @@
 package com.data.embedding;
 
-import com.data.config.EmbeddingProperties;
+import com.data.config.properties.EmbeddingProperties;
 import com.data.external.rest.pythonclient.RagSystemRestApiClient;
 import com.data.external.rest.pythonclient.dto.EmbedTranscriptRequest;
 import com.data.external.rest.pythonclient.dto.EmbeddingTask;

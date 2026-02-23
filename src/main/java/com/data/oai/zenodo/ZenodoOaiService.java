@@ -2,7 +2,7 @@ package com.data.oai.zenodo;
 
 import com.data.oai.generic.common.dto.Author;
 import com.data.oai.generic.common.dto.Record;
-import com.data.config.ZenodoOaiProps;
+import com.data.config.properties.ZenodoOaiProps;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +38,7 @@ public class ZenodoOaiService {
             collected.addAll(page.records);
             token = page.resumptionToken;
             try {
-                Thread.sleep(1000);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 continue;
             }

@@ -6,6 +6,7 @@ import com.data.jpa.dao.ReferenceMentionEntity;
 import com.data.jpa.repository.EmbedTranscriptChunkRepository;
 import com.data.oai.generic.EmbeddingMapper;
 import com.data.oai.generic.common.author.ArxivAuthorEntity;
+import com.data.oai.generic.common.dto.PaperDocument;
 import com.data.oai.generic.common.dto.Reference;
 import com.data.oai.generic.common.paper.PaperDocumentEntity;
 import com.data.oai.generic.common.record.RecordEntity;
@@ -23,7 +24,10 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -56,32 +60,33 @@ public class PaperInternalService {
     }
 
     @Transactional
-    public void persistState(Tracker tracker, Record r, EmbeddingDto embeddingInfo, String pdfUrl) {
-        persistTracker(tracker);
-
-        persistRecord(r, tracker.getDataSource(), embeddingInfo, pdfUrl);
+    public void persistState(DataSource dataSource, Record r, PaperDocument doc, EmbeddingDto embeddingInfo, String pdfUrl) {
+        persistRecord(r, dataSource, doc, embeddingInfo, pdfUrl);
     }
 
-    private void persistRecord(Record recordFromApi, DataSource dataSource, EmbeddingDto embeddingInfo, String pdfUrl) {
+    private void persistRecord(
+            Record recordFromApi,
+            DataSource dataSource,
+            PaperDocument grobidDoc,
+            EmbeddingDto embeddingInfo,
+            String pdfUrl) {
         RecordEntity dbRecord = createDatabaseRecord(recordFromApi, dataSource, pdfUrl);
-        addPaperDocument(recordFromApi, dbRecord, embeddingInfo);
+        addPaperDocument(grobidDoc, dbRecord, embeddingInfo);
         addCategories(recordFromApi, dbRecord);
         addAuthors(recordFromApi, dbRecord);
         recordRepository.save(dbRecord);
     }
 
     private static void addCategories(Record recordFromApi, RecordEntity dbRecord) {
-        dbRecord.getCategories().addAll(recordFromApi.getCategories());
+        dbRecord.getCategories().addAll(new HashSet<>(recordFromApi.getCategories()));
     }
 
     private static RecordEntity createDatabaseRecord(Record recordFromApi, DataSource dataSource, String pdfUrl) {
+        LocalDate date = parseToLocalDate(recordFromApi.getDatestamp());
         return RecordEntity.builder()
-                .arxivId(recordFromApi.getArxivId())
+                .sourceId(recordFromApi.getSourceId())
                 .oaiIdentifier(recordFromApi.getOaiIdentifier())
-                .datestamp(recordFromApi.getDatestamp() == null ? null :
-                        Instant.parse(recordFromApi.getDatestamp())
-                                .atZone(ZoneOffset.UTC)
-                                .toLocalDate())
+                .datestamp(date)
                 .comments(recordFromApi.getComments())
                 .journalRef(recordFromApi.getJournalRef())
                 .doi(recordFromApi.getDoi())
@@ -90,6 +95,7 @@ public class PaperInternalService {
                 .authors(new ArrayList<>())
                 .dataSource(dataSource)
                 .pdfUrl(pdfUrl)
+                .language(recordFromApi.getLanguage())
                 .build();
     }
 
@@ -107,29 +113,29 @@ public class PaperInternalService {
                 });
     }
 
-    private static void addPaperDocument(Record apiRecord, RecordEntity dbRecord, EmbeddingDto embeddingInfo) {
-        if (apiRecord.getDocument() == null) return;
+    private static void addPaperDocument(PaperDocument grobidDoc, RecordEntity dbRecord, EmbeddingDto embeddingInfo) {
+        if (grobidDoc == null) return;
         PaperDocumentEntity doc = PaperDocumentEntity.builder()
-                .title(apiRecord.getDocument().title())
-                .abstractText(apiRecord.getDocument().abstractText())
-                .teiXmlRaw(apiRecord.getDocument().teiXml())
-                .rawContent(apiRecord.getDocument().rawContent())
-                .keywords(apiRecord.getDocument().keywords())
-                .affiliations(apiRecord.getDocument().affiliation())
-                .classCodes(apiRecord.getDocument().classCodes())
-                .docType(apiRecord.getDocument().docType())
+                .title(grobidDoc.title())
+                .abstractText(grobidDoc.abstractText())
+                .teiXmlRaw(grobidDoc.teiXml())
+                .rawContent(grobidDoc.rawContent())
+                .keywords(grobidDoc.keywords())
+                .affiliations(grobidDoc.affiliation())
+                .classCodes(grobidDoc.classCodes())
+                .docType(grobidDoc.docType())
                 .sections(new ArrayList<>())
                 .references(new ArrayList<>())
                 .embeddings(new ArrayList<>())
                 .build();
-        addSections(apiRecord, doc);
-        addReferences(apiRecord, doc);
-        addEmbeddings(embeddingInfo, dbRecord);
+        addSections(grobidDoc, doc);
+        addReferences(grobidDoc, doc);
+//        addEmbeddings(embeddingInfo, dbRecord);
         dbRecord.setDocument(doc);
     }
 
-    private static void addSections(Record r, PaperDocumentEntity doc) {
-        List<Section> sections = r.getDocument().sections();
+    private static void addSections(PaperDocument grobidDoc, PaperDocumentEntity doc) {
+        List<Section> sections = grobidDoc.sections();
         for (int i = 0; i < sections.size(); i++) {
             var s = sections.get(i);
             doc.addSection(
@@ -143,8 +149,8 @@ public class PaperInternalService {
         }
     }
 
-    private static void addReferences(Record r, PaperDocumentEntity doc) {
-        List<Reference> refs = r.getDocument().references();
+    private static void addReferences(PaperDocument grobidDoc, PaperDocumentEntity doc) {
+        List<Reference> refs = grobidDoc.references();
         for (int index = 0; index < refs.size(); index++) {
             Reference ref = refs.get(index);
 
@@ -178,12 +184,27 @@ public class PaperInternalService {
         chunks.forEach(chunk -> dbRecord.getDocument().addEmbedding(chunk));
     }
 
+    public static LocalDate parseToLocalDate(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Instant.parse(raw)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate();
+        } catch (DateTimeParseException ignored) {
+            return LocalDate.parse(raw, DateTimeFormatter.ISO_LOCAL_DATE);
+        }
+    }
+
+    @Transactional
     public void persistTracker(Tracker tracker) {
         trackerRepository.save(tracker);
     }
 
     public List<String> findArxivIdsProcessedInPeriod(LocalDate dateStart, LocalDate dateEnd, DataSource dataSource) {
-        return recordRepository.findArxivIdsProcessedInPeriodAndByDataSource(
+        return recordRepository.findSourceIdsProcessedInPeriodAndByDataSource(
                 dateStart,
                 dateEnd,
                 dataSource

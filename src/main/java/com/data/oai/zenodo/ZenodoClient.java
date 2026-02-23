@@ -36,8 +36,11 @@ public class ZenodoClient {
 
                     // Zenodo returns 422 with <error code="noRecordsMatch"> for empty windows
                     // We still want the XML body so our parser can return empty list.
-                    if (status.is2xxSuccessful() || status.value() == 422) {
-                        return res.bodyTo(byte[].class);
+                    if (status.is2xxSuccessful() || status.value() == 422 || status.value() == 429) {
+                        try {
+                            Thread.sleep(1000);
+                            return res.bodyTo(byte[].class);
+                        } catch (InterruptedException e) {}
                     }
 
                     // for other errors, bubble up as RestClient exception

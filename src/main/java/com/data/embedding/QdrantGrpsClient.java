@@ -1,6 +1,6 @@
 package com.data.embedding;
 
-import com.data.config.QdrantGrpcConfig;
+import com.data.config.properties.QdrantGrpcConfig;
 import com.data.external.rest.pythonclient.dto.EmbedTranscriptResponse;
 import com.data.jpa.dao.ChannelDao;
 import com.data.jpa.dao.Video;

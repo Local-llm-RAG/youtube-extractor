@@ -1,6 +1,6 @@
 package com.data.oai.arxiv;
 
-import com.data.config.ArxivOaiProps;
+import com.data.config.properties.ArxivOaiProps;
 import com.data.oai.generic.common.dto.Author;
 import com.data.oai.generic.common.dto.Record;
 import lombok.RequiredArgsConstructor;
@@ -124,7 +124,7 @@ public class ArxivOaiService {
                             }
                         }
                         case "token" -> resumptionToken = text;
-                        case "id" -> cur.setArxivId(text);
+                        case "id" -> cur.setSourceId(text);
                     }
                 }
 

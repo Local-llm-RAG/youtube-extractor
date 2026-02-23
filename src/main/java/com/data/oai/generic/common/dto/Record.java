@@ -15,8 +15,7 @@ public class Record {
     private String license;
     private final List<String> categories = new ArrayList<>();
     private final List<Author> authors = new ArrayList<>();
-    private String arxivId;
-    private PaperDocument document;
+    private String sourceId;
     private String language;
 
     public Author lastAuthor() {
