@@ -1,44 +1,67 @@
-version: "3.9"
-
 services:
+
+  # =========================
+  # QDRANT (unchanged)
+  # =========================
   qdrant:
     image: qdrant/qdrant:v1.15.4
     container_name: qdrant
     restart: unless-stopped
-
     ports:
       - "6333:6333"
       - "6334:6334"
-
     volumes:
       - qdrant_storage:/qdrant/storage
-
     environment:
       QDRANT__SERVICE__HTTP_PORT: 6333
       QDRANT__SERVICE__GRPC_PORT: 6334
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
 
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:6333/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+  # =========================
+  # ELASTICSEARCH (for glutton)
+  # =========================
+#  glutton-es:
+#    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+#    environment:
+#      - discovery.type=single-node
+#      - xpack.security.enabled=false
+#      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+#    ports:
+#      - "9200:9200"
+#    volumes:
+#      - glutton-es-data:/usr/share/elasticsearch/data
 
+#  biblio-glutton:
+#    image: my-biblio-glutton
+#    depends_on:
+#      - glutton-es
+#    ports:
+#      - "8082:8082"
+#      - "8083:8083"
+#    volumes:
+#      - glutton-data:/app/data
+  # =========================
+  # GROBID (connected to glutton)
+  # =========================
   grobid:
-    image: grobid/grobid:0.8.2-crf
+    image: grobid/grobid:0.8.2.1-full
     container_name: grobid
     restart: unless-stopped
     ports:
       - "8070:8070"
       - "8071:8071"
 
+    tmpfs:
+      - /tmp:size=4g
+    shm_size: "1g"
+
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
 
-    tmpfs:
-      - /tmp:size=2g
+    volumes:
+      - C:/Users/spirtov/Desktop/dev/docker/grobid.yaml:/opt/grobid/grobid-home/config/grobid.yaml:ro
 
     environment:
       JAVA_OPTS: >
@@ -59,3 +82,5 @@ services:
       retries: 10
 volumes:
   qdrant_storage:
+#  glutton-es-data:
+#  glutton-data:
