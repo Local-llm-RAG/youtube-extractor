@@ -103,8 +103,8 @@ public class GenericFacade {
 
             PaperDocument grobidDoc = grobidService.processGrobidDocument(sourceId, apiRecord.getOaiIdentifier(), pdfContent);
             apiRecord.setLanguage(detectLang(grobidDoc.title() + " " + grobidDoc.abstractText(), sourceId));
-//            EmbeddingDto embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(grobidDoc.rawContent()));
-            EmbeddingDto embeddingInfo = EmbeddingDto.builder().build();
+            EmbeddingDto embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(grobidDoc.rawContent()));
+//            EmbeddingDto embeddingInfo = EmbeddingDto.builder().build();
             paperInternalService.persistState(
                     tracker.getDataSource(),
                     apiRecord,

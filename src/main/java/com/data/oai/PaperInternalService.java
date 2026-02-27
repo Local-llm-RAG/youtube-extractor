@@ -130,7 +130,7 @@ public class PaperInternalService {
                 .build();
         addSections(grobidDoc, doc);
         addReferences(grobidDoc, doc);
-//        addEmbeddings(embeddingInfo, dbRecord);
+        addEmbeddings(embeddingInfo, doc);
         dbRecord.setDocument(doc);
     }
 
@@ -179,9 +179,9 @@ public class PaperInternalService {
         }
     }
 
-    private static void addEmbeddings(EmbeddingDto embeddingInfo, RecordEntity dbRecord) {
-        List<EmbedTranscriptChunkEntity> chunks = EmbeddingMapper.toEntity(dbRecord.getDocument(), embeddingInfo);
-        chunks.forEach(chunk -> dbRecord.getDocument().addEmbedding(chunk));
+    private static void addEmbeddings(EmbeddingDto embeddingInfo, PaperDocumentEntity dbDocument) {
+        List<EmbedTranscriptChunkEntity> chunks = EmbeddingMapper.toEntity(dbDocument, embeddingInfo);
+        chunks.forEach(dbDocument::addEmbedding);
     }
 
     public static LocalDate parseToLocalDate(String raw) {
