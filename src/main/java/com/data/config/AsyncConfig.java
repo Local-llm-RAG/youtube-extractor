@@ -13,7 +13,7 @@ import java.util.concurrent.Executors;
 @EnableAsync
 public class AsyncConfig {
 
-    @Bean(destroyMethod = "close")
+    @Bean(name = "virtualExecutorService", destroyMethod = "close")
     public ExecutorService virtualExecutorService() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }

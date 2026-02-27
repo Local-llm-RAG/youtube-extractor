@@ -7,6 +7,7 @@ import com.data.external.rest.pythonclient.dto.TranscriptResponse;
 import com.data.external.rest.pythonclient.dto.EmbedTranscriptRequest;
 import com.data.external.rest.pythonclient.dto.EmbedTranscriptResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -16,10 +17,12 @@ import org.springframework.web.util.UriBuilder;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class RagSystemRestApiClient {
-
     private final RestClient restClient;
+
+    public RagSystemRestApiClient(@Qualifier("ragRestClient") RestClient restClient) {
+        this.restClient = restClient;
+    }
 
     public ChatResponse chat(ChatRequest request) {
         return restClient.post()

@@ -9,7 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class RagSystemConfig {
 
-    @Bean
+    @Bean(name = "ragRestClient")
     RestClient ragRestClient(RagSystemClientProperties props) {
         return RestClient.builder()
                 .baseUrl(props.getBaseUrl())

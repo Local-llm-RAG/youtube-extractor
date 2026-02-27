@@ -1,6 +1,6 @@
 package com.data.oai.arxiv;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -8,9 +8,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 
 @Service
-@RequiredArgsConstructor
 public class ArxivClient {
     private final RestClient rest;
+
+    public ArxivClient(@Qualifier("grobidRestClient") RestClient rest) {
+        this.rest = rest;
+    }
 
     public byte[] listRecords(String baseUrl, String from, String until, String token) {
         UriComponentsBuilder b = UriComponentsBuilder

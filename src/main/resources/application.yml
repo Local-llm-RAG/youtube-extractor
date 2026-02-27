@@ -88,6 +88,9 @@ oai:
 grobid:
   base-url: http://localhost:8070
   fulltext-endpoint: /api/processFulltextDocument
+  client:
+    concurrency: 8
+    queue: 16
 
 resilience4j:
   circuitbreaker:

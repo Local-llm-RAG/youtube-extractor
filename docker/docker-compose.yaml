@@ -43,14 +43,32 @@ services:
   # =========================
   # GROBID (connected to glutton)
   # =========================
+
+  grobid-lb:
+    image: traefik:v3.1
+    container_name: grobid-lb
+    restart: unless-stopped
+    command:
+      - --log.level=DEBUG
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=grobid_net
+      - --entrypoints.web.address=:80
+    ports:
+      - "8070:80"     # single entrypoint for your Java app
+      - "8088:8080"   # optional Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [grobid_net]
+
   grobid:
     image: grobid/grobid:0.8.2.1-full
-    container_name: grobid
     restart: unless-stopped
-    ports:
-      - "8070:8070"
-      - "8071:8071"
-
+    expose:
+      - "8070"
+      - "8071"
+    networks: [grobid_net]
     tmpfs:
       - /tmp:size=4g
     shm_size: "1g"
@@ -60,27 +78,35 @@ services:
         soft: 65536
         hard: 65536
 
-    volumes:
-      - C:/Users/spirtov/Desktop/dev/docker/grobid.yaml:/opt/grobid/grobid-home/config/grobid.yaml:ro
-
     environment:
       JAVA_OPTS: >
-        -Xms4g
-        -Xmx7g
+        -Xms2g
+        -Xmx2g
         -XX:+UseG1GC
         -XX:MaxGCPauseMillis=200
         -XX:+UseStringDeduplication
-    deploy:
-      resources:
-        limits:
-          cpus: "3.0"
-          memory: "10g"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8071/api/isalive"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8070/api/isalive"]
       interval: 20s
       timeout: 5s
       retries: 10
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=grobid_net"
+      - "traefik.http.routers.grobid-health.rule=PathPrefix(`/api/isalive`)"
+      - "traefik.http.routers.grobid-health.entrypoints=web"
+      - "traefik.http.routers.grobid-health.service=grobid-health-svc"
+      - "traefik.http.services.grobid-health-svc.loadbalancer.server.port=8070"
+      - "traefik.http.routers.grobid-main.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.grobid-main.entrypoints=web"
+      - "traefik.http.routers.grobid-main.service=grobid-main-svc"
+      - "traefik.http.services.grobid-main-svc.loadbalancer.server.port=8070"
 volumes:
   qdrant_storage:
 #  glutton-es-data:
 #  glutton-data:
+
+networks:
+  grobid_net:
+    name: grobid_net
+    driver: bridge

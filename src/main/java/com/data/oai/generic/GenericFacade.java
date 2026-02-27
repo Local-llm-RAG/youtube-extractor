@@ -11,7 +11,7 @@ import com.data.oai.generic.common.tracker.Tracker;
 import com.data.oai.generic.common.dto.Record;
 import com.data.oai.generic.common.dto.PaperDocument;
 import com.data.grobid.GrobidService;
-import com.optimaize.langdetect.i18n.LdLocale;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.language.detect.LanguageDetector;
@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,12 +40,8 @@ public class GenericFacade {
     private final EmbeddingProperties embeddingProperties;
     private final LanguageDetector languageDetector;
 
-    private final ExecutorService grobidPool = Executors.newFixedThreadPool(2, r -> {
-        Thread t = new Thread(r);
-        t.setName("grobid-worker-" + t.getId());
-        t.setDaemon(true);
-        return t;
-    });
+    @Resource(name = "grobidExecutor")
+    private ExecutorService grobidPool;
 
     public Tracker getTracker(LocalDate startDate, DataSource dataSource) {
         return paperInternalService.getTracker(startDate, dataSource);
@@ -115,8 +110,12 @@ public class GenericFacade {
             log.warn("Failed to process arXivId={} with GROBID", sourceId, e);
         } finally {
             int newVal = processed.incrementAndGet();
+
             tracker.setProcessedPapersForPeriod(newVal);
-            paperInternalService.persistTracker(tracker);
+
+            if (newVal % 10 == 0) {
+                paperInternalService.persistTracker(tracker);
+            }
         }
     }
 
