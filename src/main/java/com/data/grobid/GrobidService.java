@@ -18,7 +18,7 @@ public class GrobidService {
         long t0 = System.nanoTime();
         String xmlString = grobidClient.processPdfToXmlString(arxivId, pdfBytes, props.baseUrl(), props.fulltextEndpoint());
         long t1 = System.nanoTime();
-        PaperDocument doc = GrobidTeiMapperJsoup.toArxivPaperDocument(arxivId, oaiIdentifier, xmlString);
+        PaperDocument doc = GrobidTeiMapperJsoup.toPaperDocument(arxivId, oaiIdentifier, xmlString);
         long t2 = System.nanoTime();
 
         log.info("GROBID {} ms | Mapping {} ms | total {} ms | id={}",

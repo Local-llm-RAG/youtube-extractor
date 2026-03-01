@@ -1,12 +1,16 @@
 package com.data.oai.generic.common.dto;
 
-public record Section(
-        String title,
-        Integer level,
-        String text
-) {
-    public Section {
-        title = (title == null || title.isBlank()) ? "UNTITLED" : title.trim();
-        text = (text == null) ? "" : text.trim();
-    }
+import com.data.embedding.dto.EmbeddingDto;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+public class Section {
+    String title;
+    Integer level;
+    String text;
+    List<EmbeddingDto> embeddings;
 }

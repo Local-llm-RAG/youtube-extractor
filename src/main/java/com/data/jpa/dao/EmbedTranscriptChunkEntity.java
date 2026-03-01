@@ -1,11 +1,8 @@
 package com.data.jpa.dao;
 
-import com.data.oai.generic.common.paper.PaperDocumentEntity;
+import com.data.oai.generic.common.section.SectionEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -15,12 +12,12 @@ import java.util.List;
 @Table(
         name = "embed_transcript_chunk",
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_embed_transcript_chunk_doc_chunk",
-                columnNames = {"record_document_id", "embedding_model", "task", "chunk_index"}
+                name = "uq_embed_transcript_chunk_section_chunk",
+                columnNames = {"section_id", "embedding_model", "task", "chunk_index"}
         ),
         indexes = {
-                @Index(name = "ix_embed_transcript_chunk_paper", columnList = "record_document_id"),
-                @Index(name = "ix_embed_transcript_chunk_paper_chunk", columnList = "record_document_id, chunk_index"),
+                @Index(name = "ix_embed_transcript_chunk_section", columnList = "section_id"),
+                @Index(name = "ix_embed_transcript_chunk_section_chunk", columnList = "section_id, chunk_index"),
                 @Index(name = "ix_embed_transcript_chunk_model_task", columnList = "embedding_model, task")
         }
 )
@@ -35,8 +32,12 @@ public class EmbedTranscriptChunkEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "record_document_id", nullable = false)
-    private PaperDocumentEntity document;
+    @JoinColumn(
+            name = "section_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_embed_transcript_chunk_section")
+    )
+    private SectionEntity section;
 
     @Column(name = "task", columnDefinition = "text")
     private String task;

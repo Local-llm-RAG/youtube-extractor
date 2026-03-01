@@ -82,13 +82,6 @@ public class PaperDocumentEntity {
     @OrderColumn(name = "pos")
     private List<SectionEntity> sections = new ArrayList<>();
 
-    @OneToMany(
-            mappedBy = "document",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<EmbedTranscriptChunkEntity> embeddings = new ArrayList<>();
-
     public void addSection(SectionEntity section) {
         sections.add(section);
         section.setDocument(this);
@@ -107,15 +100,5 @@ public class PaperDocumentEntity {
     public void removeReference(ReferenceMentionEntity ref) {
         references.remove(ref);
         ref.setDocument(null);
-    }
-
-    public void addEmbedding(EmbedTranscriptChunkEntity emb) {
-        embeddings.add(emb);
-        emb.setDocument(this);
-    }
-
-    public void removeEmbedding(EmbedTranscriptChunkEntity emb) {
-        embeddings.remove(emb);
-        emb.setDocument(null);
     }
 }

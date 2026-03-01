@@ -7,7 +7,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
-import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
@@ -26,10 +25,10 @@ public final class GrobidTeiMapperJsoup {
             "head", "p", "ab", "quote", "cit", "list", "item", "label", "note", "formula", "figdesc"
     );
 
-    public static PaperDocument toArxivPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
+    public static PaperDocument toPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
         if (teiXml == null || teiXml.isBlank()) {
             return new PaperDocument(arxivId, oaiIdentifier, null, null,
-                    List.of(new Section("BODY", 1, "")), teiXml, "NO_CONTENT",
+                    List.of(new Section("BODY", 1, "", List.of())), teiXml, "NO_CONTENT",
                     List.of(), List.of(), List.of(), List.of(), null);
         }
 
@@ -51,9 +50,9 @@ public final class GrobidTeiMapperJsoup {
 
         // Improved: recursive, preserves nested divs and avoids dropping subsection text.
         List<Section> sections = extractSections(tei);
-        if (sections.isEmpty() || sections.stream().allMatch(s -> s.text().isBlank())) {
+        if (sections.isEmpty() || sections.stream().allMatch(s -> s.getText().isBlank())) {
             String bodyText = normalizeWs(firstText(tei, "text > body"));
-            sections = List.of(new Section("BODY", 1, bodyText == null ? "" : bodyText));
+            sections = List.of(new Section("BODY", 1, bodyText == null ? "" : bodyText, new ArrayList<>()));
         }
 
         // Improved: no re-parse; preserve order better; avoid table dumps but keep captions.
@@ -382,8 +381,8 @@ public final class GrobidTeiMapperJsoup {
 
             // Then capture any floating blocks not inside a div as a generic section
             String floating = extractFloatingBlocks(container);
-            if (!floating.isBlank() && out.stream().noneMatch(s -> s.title().equals(containerName) && s.level() == 1)) {
-                out.add(new Section(containerName, 1, floating));
+            if (!floating.isBlank() && out.stream().noneMatch(s -> s.getTitle().equals(containerName) && s.getLevel() == 1)) {
+                out.add(new Section(containerName, 1, floating, new ArrayList<>()));
             }
         }
 
@@ -391,7 +390,7 @@ public final class GrobidTeiMapperJsoup {
         return out.stream()
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
-                                s -> s.title() + "::" + s.text().hashCode(),
+                                s -> s.getTitle() + "::" + s.getText().hashCode(),
                                 s -> s,
                                 (a, b) -> a, LinkedHashMap::new
                         ),
@@ -414,7 +413,7 @@ public final class GrobidTeiMapperJsoup {
 
         String text = extractDivTextExcludingNestedDivs(div);
         if (!text.isBlank()) {
-            out.add(new Section(sectionTitle, Math.max(1, level), text));
+            out.add(new Section(sectionTitle, Math.max(1, level), text, new ArrayList<>()));
         }
 
         // Recurse into nested divs as subsections

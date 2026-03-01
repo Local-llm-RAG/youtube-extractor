@@ -1,5 +1,6 @@
 package com.data.oai.generic.common.dto;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public record PaperDocument(
@@ -17,7 +18,7 @@ public record PaperDocument(
         String docType) {
     public PaperDocument {
         sections = (sections == null || sections.isEmpty())
-                ? List.of(new Section("BODY", null, ""))
+                ? List.of(new Section("BODY", null, "", new ArrayList<>()))
                 : List.copyOf(sections);
     }
 }

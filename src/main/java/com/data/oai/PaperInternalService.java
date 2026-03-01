@@ -4,7 +4,6 @@ import com.data.embedding.dto.EmbeddingDto;
 import com.data.jpa.dao.EmbedTranscriptChunkEntity;
 import com.data.jpa.dao.ReferenceMentionEntity;
 import com.data.jpa.repository.EmbedTranscriptChunkRepository;
-import com.data.oai.generic.EmbeddingMapper;
 import com.data.oai.generic.common.author.ArxivAuthorEntity;
 import com.data.oai.generic.common.dto.PaperDocument;
 import com.data.oai.generic.common.dto.Reference;
@@ -60,18 +59,17 @@ public class PaperInternalService {
     }
 
     @Transactional
-    public void persistState(DataSource dataSource, Record r, PaperDocument doc, EmbeddingDto embeddingInfo, String pdfUrl) {
-        persistRecord(r, dataSource, doc, embeddingInfo, pdfUrl);
+    public void persistState(DataSource dataSource, Record r, PaperDocument doc, String pdfUrl) {
+        persistRecord(r, dataSource, doc, pdfUrl);
     }
 
     private void persistRecord(
             Record recordFromApi,
             DataSource dataSource,
             PaperDocument grobidDoc,
-            EmbeddingDto embeddingInfo,
             String pdfUrl) {
         RecordEntity dbRecord = createDatabaseRecord(recordFromApi, dataSource, pdfUrl);
-        addPaperDocument(grobidDoc, dbRecord, embeddingInfo);
+        addPaperDocument(grobidDoc, dbRecord);
         addCategories(recordFromApi, dbRecord);
         addAuthors(recordFromApi, dbRecord);
         recordRepository.save(dbRecord);
@@ -113,7 +111,7 @@ public class PaperInternalService {
                 });
     }
 
-    private static void addPaperDocument(PaperDocument grobidDoc, RecordEntity dbRecord, EmbeddingDto embeddingInfo) {
+    private static void addPaperDocument(PaperDocument grobidDoc, RecordEntity dbRecord) {
         if (grobidDoc == null) return;
         PaperDocumentEntity doc = PaperDocumentEntity.builder()
                 .title(grobidDoc.title())
@@ -126,27 +124,19 @@ public class PaperInternalService {
                 .docType(grobidDoc.docType())
                 .sections(new ArrayList<>())
                 .references(new ArrayList<>())
-                .embeddings(new ArrayList<>())
                 .build();
         addSections(grobidDoc, doc);
         addReferences(grobidDoc, doc);
-        addEmbeddings(embeddingInfo, doc);
         dbRecord.setDocument(doc);
     }
 
     private static void addSections(PaperDocument grobidDoc, PaperDocumentEntity doc) {
         List<Section> sections = grobidDoc.sections();
-        for (int i = 0; i < sections.size(); i++) {
-            var s = sections.get(i);
-            doc.addSection(
-                    SectionEntity.builder()
-                            .title(s.title())
-                            .level(s.level())
-                            .text(s.text())
-                            .pos(i)
-                            .build()
-            );
-        }
+        if (sections == null || sections.isEmpty()) return;
+
+        IntStream.range(0, sections.size())
+                .mapToObj(i -> toSectionEntity(sections.get(i), i))
+                .forEach(doc::addSection);
     }
 
     private static void addReferences(PaperDocument grobidDoc, PaperDocumentEntity doc) {
@@ -179,9 +169,31 @@ public class PaperInternalService {
         }
     }
 
-    private static void addEmbeddings(EmbeddingDto embeddingInfo, PaperDocumentEntity dbDocument) {
-        List<EmbedTranscriptChunkEntity> chunks = EmbeddingMapper.toEntity(dbDocument, embeddingInfo);
-        chunks.forEach(dbDocument::addEmbedding);
+    private static SectionEntity toSectionEntity(Section s, int pos) {
+        return SectionEntity.builder()
+                .title(s.getTitle())
+                .level(s.getLevel())
+                .text(s.getText())
+                .pos(pos)
+                .embeddings(s.getEmbeddings().stream()
+                        .map(PaperInternalService::toChunkEntity)
+                        .toList())
+                .build();
+    }
+
+    private static EmbedTranscriptChunkEntity toChunkEntity(EmbeddingDto dto) {
+        return EmbedTranscriptChunkEntity.builder()
+                .task(dto.getEmbeddingTask())
+                .chunkTokens(dto.getChunkTokens())
+                .chunkOverlap(dto.getChunkOverlap())
+                .embeddingModel(dto.getEmbeddingModel())
+                .dim(dto.getDim())
+                .chunkIndex(dto.getChunkIndex())
+                .chunkText(dto.getChunkText())
+                .spanStart(dto.getSpanStart())
+                .spanEnd(dto.getSpanEnd())
+                .embedding(dto.getEmbedding())
+                .build();
     }
 
     public static LocalDate parseToLocalDate(String raw) {

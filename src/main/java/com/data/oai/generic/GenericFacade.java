@@ -98,13 +98,15 @@ public class GenericFacade {
 
             PaperDocument grobidDoc = grobidService.processGrobidDocument(sourceId, apiRecord.getOaiIdentifier(), pdfContent);
             apiRecord.setLanguage(detectLang(grobidDoc.title() + " " + grobidDoc.abstractText(), sourceId));
-            EmbeddingDto embeddingInfo = ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(grobidDoc.rawContent()));
+            grobidDoc.sections().forEach(
+                    section ->
+                            section.setEmbeddings(ragService.getEmbeddingsForText(buildEmbedTranscriptRequest(section.getText())))
+            );
 //            EmbeddingDto embeddingInfo = EmbeddingDto.builder().build();
             paperInternalService.persistState(
                     tracker.getDataSource(),
                     apiRecord,
                     grobidDoc,
-                    embeddingInfo,
                     urlWithContent.getKey());
         } catch (Exception e) {
             log.warn("Failed to process arXivId={} with GROBID", sourceId, e);

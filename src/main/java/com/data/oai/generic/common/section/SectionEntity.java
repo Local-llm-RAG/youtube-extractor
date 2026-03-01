@@ -1,16 +1,20 @@
 package com.data.oai.generic.common.section;
 
+import com.data.jpa.dao.EmbedTranscriptChunkEntity;
 import com.data.oai.generic.common.paper.PaperDocumentEntity;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
 @Entity
 @Table(
-    name = "document_section",
-    indexes = @Index(name = "idx_document_section_document_id", columnList = "document_id"),
-    uniqueConstraints = @UniqueConstraint(name = "uq_document_section_document_pos", columnNames = {"document_id", "pos"})
+        name = "document_section",
+        indexes = @Index(name = "idx_document_section_document_id", columnList = "document_id"),
+        uniqueConstraints = @UniqueConstraint(name = "uq_document_section_document_pos", columnNames = {"document_id", "pos"})
 )
 @Builder
 @AllArgsConstructor
@@ -23,9 +27,9 @@ public class SectionEntity {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(
-        name = "document_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_document_section_document")
+            name = "document_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_document_section_document")
     )
     private PaperDocumentEntity document;
 
@@ -40,4 +44,22 @@ public class SectionEntity {
 
     @Column(name = "pos", nullable = false)
     private Integer pos;
+
+    @OneToMany(
+            mappedBy = "section",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderBy("chunkIndex ASC")
+    private List<EmbedTranscriptChunkEntity> embeddings = new ArrayList<>();
+
+    public void addEmbedding(EmbedTranscriptChunkEntity emb) {
+        embeddings.add(emb);
+        emb.setSection(this);
+    }
+
+    public void removeEmbedding(EmbedTranscriptChunkEntity emb) {
+        embeddings.remove(emb);
+        emb.setSection(null);
+    }
 }
