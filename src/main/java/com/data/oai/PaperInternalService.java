@@ -170,15 +170,21 @@ public class PaperInternalService {
     }
 
     private static SectionEntity toSectionEntity(Section s, int pos) {
-        return SectionEntity.builder()
+        SectionEntity section = SectionEntity.builder()
                 .title(s.getTitle())
                 .level(s.getLevel())
                 .text(s.getText())
                 .pos(pos)
-                .embeddings(s.getEmbeddings().stream()
-                        .map(PaperInternalService::toChunkEntity)
-                        .toList())
+                .embeddings(new ArrayList<>())
                 .build();
+
+        if (s.getEmbeddings() != null) {
+            s.getEmbeddings().stream()
+                    .map(PaperInternalService::toChunkEntity)
+                    .forEach(section::addEmbedding);
+        }
+
+        return section;
     }
 
     private static EmbedTranscriptChunkEntity toChunkEntity(EmbeddingDto dto) {

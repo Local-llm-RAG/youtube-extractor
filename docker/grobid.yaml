@@ -61,7 +61,7 @@ grobid:
   concurrency: 2
   # when the pool is full, for queries waiting for the availability of a Grobid engine, this is the maximum time wait to try
   # to get an engine (in seconds) - normally never change it
-  poolMaxWait: 1
+  poolMaxWait: 120
 
   delft:
     # DeLFT global parameters
