@@ -376,29 +376,33 @@ public final class GrobidTeiMapperJsoup {
                     : "BODY";
 
             for (Element div : container.select("> div")) {
-                walkDivAsSections(out, div, 1);
+                String sectionTitle = resolveSectionTitle(div);
+                String sectionText = extractDivTextIncludingNestedDivs(div);
+
+                if (!sectionText.isBlank()) {
+                    out.add(new Section(sectionTitle, 1, sectionText, new ArrayList<>()));
+                }
             }
 
-            // Then capture any floating blocks not inside a div as a generic section
             String floating = extractFloatingBlocks(container);
             if (!floating.isBlank() && out.stream().noneMatch(s -> s.getTitle().equals(containerName) && s.getLevel() == 1)) {
                 out.add(new Section(containerName, 1, floating, new ArrayList<>()));
             }
         }
 
-        // de-dupe by (title + text hash) keeping order
         return out.stream()
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
                                 s -> s.getTitle() + "::" + s.getText().hashCode(),
                                 s -> s,
-                                (a, b) -> a, LinkedHashMap::new
+                                (a, b) -> a,
+                                LinkedHashMap::new
                         ),
                         m -> List.copyOf(m.values())
                 ));
     }
 
-    private static void walkDivAsSections(List<Section> out, Element div, int level) {
+    private static String resolveSectionTitle(Element div) {
         String head = "";
         Element headEl = div.selectFirst("> head");
         if (headEl != null) head = cleanedHeadText(headEl);
@@ -409,39 +413,24 @@ public final class GrobidTeiMapperJsoup {
         }
 
         String sectionTitle = normalizeSectionTitle(head);
-        if (sectionTitle.isBlank()) sectionTitle = "SECTION";
-
-        String text = extractDivTextExcludingNestedDivs(div);
-        if (!text.isBlank()) {
-            out.add(new Section(sectionTitle, Math.max(1, level), text, new ArrayList<>()));
-        }
-
-        // Recurse into nested divs as subsections
-        for (Element childDiv : div.select("> div")) {
-            walkDivAsSections(out, childDiv, level + 1);
-        }
+        return sectionTitle.isBlank() ? "SECTION" : sectionTitle;
     }
 
-    private static String extractDivTextExcludingNestedDivs(Element div) {
+    private static String extractDivTextIncludingNestedDivs(Element div) {
         if (div == null) return "";
 
         Element clone = div.clone();
-        clone.select("div").remove();
+
+        // Remove only the direct heading of the parent div,
+        // but keep nested subsection headings as part of the text.
         clone.select("> head").remove();
 
         StringBuilder sb = new StringBuilder();
 
-        for (Element el : clone.select("p, ab, quote, cit, list, item, label, note, formula, figure")) {
+        for (Element el : clone.select("p, ab, quote, cit, list, item, label, note, formula, figure, table, head")) {
             if (isInsideTable(el)) continue;
 
-            String chunk;
-            if ("figure".equalsIgnoreCase(el.tagName())) {
-                Element figDesc = el.selectFirst("figDesc");
-                chunk = normalizeWs(figDesc != null ? figDesc.text() : "");
-            } else {
-                chunk = normalizeWs(el.text());
-            }
-
+            String chunk = extractBlockText(el);
             if (!chunk.isBlank()) {
                 if (!sb.isEmpty()) sb.append("\n\n");
                 sb.append(chunk);
