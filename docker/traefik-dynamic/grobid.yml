@@ -1,0 +1,14 @@
+http:
+  routers:
+    grobid:
+      entryPoints: [web]
+      rule: PathPrefix(`/`)
+      service: grobid-svc
+
+  services:
+    grobid-svc:
+      loadBalancer:
+        servers:
+          - url: "http://docker-grobid-1:8070"
+          - url: "http://docker-grobid-2:8070"
+          - url: "http://docker-grobid-3:8070"
