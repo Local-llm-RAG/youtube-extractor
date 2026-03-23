@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication
 @EnableConfigurationProperties(value = {
         ModelProperties.class, RagSystemClientProperties.class, EmbeddingProperties.class,
-        ArxivOaiProps.class, GrobidProperties.class, ZenodoOaiProps.class
+        ArxivOaiProps.class, GrobidProperties.class, ZenodoOaiProps.class, PubmedOaiProps.class
 })
 public class YoutubeExtractorApplication {
 

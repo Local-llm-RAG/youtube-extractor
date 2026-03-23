@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Spring Boot 4.0.1 data extraction and processing platform that aggregates research papers (ArXiv, Zenodo) and YouTube videos, enriches them with AI-powered embeddings, and provides RAG (Retrieval-Augmented Generation) capabilities via a vector database (Qdrant).
+A Spring Boot 4.0.1 data extraction and processing platform that aggregates research papers (ArXiv, Zenodo, etc) and YouTube videos, enriches them with AI-powered embeddings on demand, and provides RAG (Retrieval-Augmented Generation) capabilities via a vector database (Qdrant).
 
 ## Build & Run Commands
 
@@ -36,7 +36,7 @@ Also requires: PostgreSQL on localhost:5432, Python FastAPI RAG service on local
 
 ### Data Processing Pipelines
 
-1. **ArXiv/Zenodo Path:** OAI protocol query → fetch metadata → download PDF → GROBID parse to TEI-XML → extract sections → language detect (Tika) → embed → store in Qdrant
+1. **OAI-PMH Path:** OAI protocol query → fetch metadata → download PDF → GROBID parse to TEI-XML → extract sections → language detect (Tika) → embed → store all the info in database
 2. **YouTube Path:** YouTube API fetch → download transcripts → chunk → embed → store in Qdrant
 3. **Query Path:** Search → vector/database lookup → cost estimation → LLM transformation
 
@@ -50,14 +50,14 @@ Also requires: PostgreSQL on localhost:5432, Python FastAPI RAG service on local
 
 ### External Integrations
 
-| Service | Purpose | Config |
-|---------|---------|--------|
-| GROBID (Docker, port 8070) | PDF → structured TEI-XML | `GrobidClient` with retry, `GrobidTeiMapperJsoup` for parsing |
-| Qdrant (Docker, ports 6333/6334) | Vector database for embeddings | `QdrantGrpsClient` via GRPC |
-| Python FastAPI (port 8000) | Embedding generation | `RagSystemRestApiService` / `RagSystemWebFluxClient` |
-| OpenAI API | LLM transformations | `GPTClient` / `GptService` with cost estimation |
-| Google YouTube Data API v3 | Video/channel metadata & transcripts | `YouTubeGateway` |
-| ArXiv OAI / Zenodo OAI | Research paper metadata | Protocol clients in `com.data.oai` |
+| Service                          | Purpose                              | Config                                                        |
+|----------------------------------|--------------------------------------|---------------------------------------------------------------|
+| GROBID (Docker, port 8070)       | PDF → structured TEI-XML             | `GrobidClient` with retry, `GrobidTeiMapperJsoup` for parsing |
+| Qdrant (Docker, ports 6333/6334) | Vector database for embeddings       | `QdrantGrpsClient` via GRPC                                   |
+| Python FastAPI (port 8000)       | Embedding generation                 | `RagSystemRestApiService` / `RagSystemWebFluxClient`          |
+| OpenAI API                       | LLM transformations                  | `GPTClient` / `GptService` with cost estimation               |
+| Google YouTube Data API v3       | Video/channel metadata & transcripts | `YouTubeGateway`                                              |
+| ArXiv OAI / Zenodo OAI           | Research paper metadata              | Protocol clients in `com.data.oai`                            |
 
 ### REST API Endpoints
 
@@ -75,3 +75,16 @@ PostgreSQL with Flyway migrations in `src/main/resources/db/migration/`. JPA wit
 ## Tech Stack
 
 Java 25, Spring Boot 4.0.1, Gradle, Lombok, Flyway, JPA/Hibernate, WebFlux, Spring Batch, Resilience4j, Jsoup, Apache Tika, jtokkit (token counting).
+
+## Additional detailed tech information
+The idea of the project is to collect data from different sources.
+1. The first source is Youtube, where we use the Youtube API to collect the metadata for each video.
+Then the engine calls for each video python service through http to get the video transcripts. 
+In The python service this happens using https://github.com/jdepoix/youtube-transcript-api with webshare proxies to avoid blocking
+Then everything is stored in the database.
+2. The second part allows to get the Youtube video or whole channel and to pass the transcript through openAI transformer.
+This transformer has two parts - estimation that calculates roughly the price and the actual transformer. 
+Then the generated text is also persisted in database.
+3. The third part is the core engine that is collecting science papers, process them through Grobid, enriches them with info and saves them in DB.
+The idea here is that every source like Arxiv, Zenodo and future sources will share OAI-PMH protocol, which allows metadata harvesting.
+This is the main approach that the application is using to collect this data.

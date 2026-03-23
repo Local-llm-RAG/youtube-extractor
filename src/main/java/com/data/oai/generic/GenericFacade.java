@@ -91,6 +91,9 @@ public class GenericFacade {
 
         try {
             AbstractMap.SimpleEntry<String, byte[]> urlWithContent = handler.fetchPdfAndEnrich(apiRecord);
+            if (urlWithContent == null) {
+                return; // no PDF available — already logged by handler
+            }
             byte[] pdfContent = urlWithContent.getValue();
             if (pdfContent == null || pdfContent.length == 0) {
                 throw new RuntimeException("Empty or no pdf content found for %s".formatted(sourceId));

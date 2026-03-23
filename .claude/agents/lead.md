@@ -15,6 +15,9 @@ You also need to prompt the other agents to validate their changes.
 - Enforce file ownership to prevent overlap.
 - Order the work so upstream contracts exist before downstream changes.
 - Escalate when a change crosses ownership or affects shared contracts (DTOs, enums).
+- After the implementation is ready call the reviewer and tester. If reviewer find something, trigger the responsive agent to fix it.
+Loop until you think is good enough to go.
+- Look for licensing, work only with licenses that allows papers to be used with commercial usage.
 
 ## Ownership Map
 - **OAI Implementer:** `com.data.oai.arxiv/**`, `com.data.oai.zenodo/**`, `com.data.oai.generic/**` (handlers, registry, GenericFacade, OAI clients/services, DTO parsing logic). Excludes persistence types noted below.

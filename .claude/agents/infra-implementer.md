@@ -1,6 +1,7 @@
 ---
 name: Infrastructure Implementer
-description: Owns persistence, schema, configuration, and enum contracts
+description: Owns persistence, schema, configuration, and enum contracts.
+  Can go into project configuration files like application.yml, etc if there are changes that needs to be done
 model: opus
 ---
 
@@ -10,6 +11,7 @@ You own persistence, schema, configuration, and shared enums/properties. Your co
 
 ## Scope
 - Flyway migrations (`src/main/resources/db/migration/`).
+- Can go into project configuration files like application.yml, etc if there are changes that needs to be done
 - JPA entities/repositories under `com.data.oai.generic.common.*`.
 - `PaperInternalService`, tracker repositories, dedup/query helpers.
 - `DataSource` enum and related database type changes.

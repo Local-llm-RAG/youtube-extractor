@@ -25,7 +25,7 @@ public class OAIProcessorService implements Job {
     public void execute(@NotNull JobExecution execution) {
         int daysBack = 90;
 
-        List.of(DataSource.ARXIV)
+        List.of(DataSource.PUBMED)
                 .forEach(dataSource -> {
                     IntStream.range(0, daysBack)
                             .mapToObj(i -> genericFacade.getTracker(LocalDate.now().minusDays(i), dataSource))
