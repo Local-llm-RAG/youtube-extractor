@@ -110,6 +110,14 @@ resilience4j:
         limitForPeriod: 1
         limitRefreshPeriod: 12s
         timeoutDuration: 30s
+      zenodo:
+        limitForPeriod: 5
+        limitRefreshPeriod: 5s
+        timeoutDuration: 60s
+      pubmed:
+        limitForPeriod: 5
+        limitRefreshPeriod: 5s
+        timeoutDuration: 60s
 
   retry:
     instances:
@@ -121,3 +129,39 @@ resilience4j:
         enableExponentialBackoff: true
         exponentialBackoffMultiplier: 2.0
         exponentialMaxWaitDuration: 10m
+      zenodo:
+        maxAttempts: 5
+        waitDuration: 5s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
+        exponentialMaxWaitDuration: 30s
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - com.data.oai.RetryableApiException
+      arxiv:
+        maxAttempts: 5
+        waitDuration: 3s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
+        exponentialMaxWaitDuration: 30s
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - com.data.oai.RetryableApiException
+      pubmed:
+        maxAttempts: 5
+        waitDuration: 3s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
+        exponentialMaxWaitDuration: 16s
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - com.data.oai.RetryableApiException
+      grobid:
+        maxAttempts: 3
+        waitDuration: 5s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
+        exponentialMaxWaitDuration: 10s
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
