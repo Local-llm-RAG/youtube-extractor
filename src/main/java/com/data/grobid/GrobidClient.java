@@ -5,6 +5,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -29,7 +30,7 @@ public class GrobidClient {
                         .body(mb.build())
                         .retrieve()
                         .body(String.class);
-            } catch (HttpStatusCodeException ex) {
+            } catch (HttpStatusCodeException | ResourceAccessException ex) {
                  if (attempt == maxAttempts) {
                     throw ex;
                 }

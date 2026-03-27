@@ -68,7 +68,10 @@ public class PubmedClient {
     public byte[] downloadPdf(String url) {
         String httpsUrl = url.replace("ftp://ftp.ncbi.nlm.nih.gov/",
                 "https://ftp.ncbi.nlm.nih.gov/");
-        URI uri = URI.create(httpsUrl);
+        URI uri = UriComponentsBuilder.fromUriString(httpsUrl)
+                .build()
+                .encode()
+                .toUri();
         return throttledExecute(uri);
     }
 

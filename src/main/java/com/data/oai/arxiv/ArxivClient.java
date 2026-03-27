@@ -37,7 +37,10 @@ public class ArxivClient {
     }
 
     public byte[] getPdf(String pdfUrl) {
-        URI pdfUri = URI.create(pdfUrl);
+        URI pdfUri = UriComponentsBuilder.fromUriString(pdfUrl)
+                .build()
+                .encode()
+                .toUri();
         return rest.get().uri(pdfUri).retrieve().body(byte[].class);
     }
 
