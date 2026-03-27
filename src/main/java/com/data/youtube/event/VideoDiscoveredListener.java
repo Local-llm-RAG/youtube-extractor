@@ -1,10 +1,10 @@
 package com.data.youtube.event;
 
-import com.data.external.rest.pythonclient.RagSystemRestApiClient;
-import com.data.jpa.dao.Video;
-import com.data.jpa.dao.VideoTranscript;
-import com.data.jpa.repository.VideoRepository;
-import com.data.jpa.repository.VideoTranscriptRepository;
+import com.data.rag.client.RagSystemRestApiClient;
+import com.data.youtube.persistence.entity.Video;
+import com.data.youtube.persistence.entity.VideoTranscript;
+import com.data.youtube.persistence.repository.VideoRepository;
+import com.data.youtube.persistence.repository.VideoTranscriptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -55,7 +55,7 @@ public class VideoDiscoveredListener {
                     .filter(Objects::nonNull)
                     .map(resp -> new AbstractMap.SimpleEntry<>(resp.language(), resp.text()))
                     .filter(map -> {
-                        if (Objects.nonNull(map.getValue()) || !map.getValue().isEmpty()) {
+                        if (map.getValue() != null && !map.getValue().isEmpty()) {
                             return true;
                         }
                         log.warn("Empty transcript for youtubeVideoId={}", youtubeVideoId);

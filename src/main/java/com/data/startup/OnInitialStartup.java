@@ -1,6 +1,6 @@
 package com.data.startup;
 
-import com.data.youtube.YoutubeRegionBootstrapService;
+import com.data.youtube.service.YoutubeRegionBootstrapService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;

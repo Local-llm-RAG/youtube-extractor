@@ -15,9 +15,9 @@ spring:
   application:
     name: youtube-extractor
   datasource:
-    url: jdbc:postgresql://localhost:5433/youtube-extractor
+    url: jdbc:postgresql://localhost:5432/youtube-extractor
     username: postgres
-    password: 1234
+    password: cost#123$
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 30
@@ -45,6 +45,7 @@ logging:
 
 youtube:
   api-key: ${YOUTUBE_API_KEY}
+  application-name: youtube-extractor
 
 rag:
   api:
@@ -74,17 +75,24 @@ gpt:
   key: ${GPT_API_KEY}
 
 arxiv:
-  searchUrl: https://export.arxiv.org/api/query?search_query=
-  oai:
-    base-url: "https://export.arxiv.org/oai2"
-    user-agent: "company@yopmail.com"
+  search-url: https://export.arxiv.org/api/query?search_query=
 oai:
+  processing:
+    days-back: 90
   zenodo:
     base-url: https://zenodo.org/oai2d
     metadata-prefix: oai_datacite
+    api-base-url: https://zenodo.org/api/records/
   arxiv:
     base-url: "https://export.arxiv.org/oai2"
-    user-agent: "company@yopmail.com"
+    metadata-prefix: arXiv
+    pdf-base-url: "https://arxiv.org/pdf/"
+    pagination-delay-ms: 1000
+  pubmed:
+    base-url: "https://www.ncbi.nlm.nih.gov/pmc/oai/oai.cgi"
+    metadata-prefix: oai_dc
+    set: pmc-open
+    oa-service-url: "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
 grobid:
   base-url: http://localhost:8070
   fulltext-endpoint: /api/processFulltextDocument
@@ -110,6 +118,10 @@ resilience4j:
         limitForPeriod: 1
         limitRefreshPeriod: 12s
         timeoutDuration: 30s
+      arxiv:
+        limitForPeriod: 3
+        limitRefreshPeriod: 5s
+        timeoutDuration: 60s
       zenodo:
         limitForPeriod: 5
         limitRefreshPeriod: 5s

@@ -1,63 +1,51 @@
 package com.data.oai.zenodo;
 
-import com.data.oai.RetryableApiException;
+import com.data.config.properties.ZenodoOaiProps;
+import com.data.oai.shared.util.OaiHttpSupport;
+import com.data.shared.exception.OaiHarvestException;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 
 @Service
 public class ZenodoClient {
 
     private final RestClient rest;
+    private final ZenodoOaiProps props;
 
-    public ZenodoClient(@Qualifier("zenodoRestClient") RestClient rest) {
+    public ZenodoClient(@Qualifier("zenodoRestClient") RestClient rest, ZenodoOaiProps props) {
         this.rest = rest;
+        this.props = props;
     }
 
     @Retry(name = "zenodo")
     @RateLimiter(name = "zenodo")
-    public byte[] listRecords(String baseUrl, String from, String until, String token, String metadataPrefix) {
-        URI uri = buildListRecordsUri(baseUrl, from, until, token, metadataPrefix);
-
-        return rest.get()
-                .uri(uri)
-                .exchange((req, res) -> {
-                    HttpStatusCode status = res.getStatusCode();
-
-                    if (status.is2xxSuccessful() || status.value() == 422) {
-                        return res.bodyTo(byte[].class);
-                    }
-
-                    throwIfRetryable(status, uri.toString());
-                    throw new IllegalStateException(
-                            "Zenodo OAI call failed. HTTP " + status.value() + " for " + uri);
-                });
+    public byte[] listRecords(String baseUrl, String from, String until,
+                              String token, String metadataPrefix) {
+        URI uri = OaiHttpSupport.buildListRecordsUri(baseUrl, from, until, token, metadataPrefix);
+        // Zenodo returns 422 for certain OAI error responses that need parsing
+        return OaiHttpSupport.executeOaiExchange(rest, uri, code -> code == 422, uri.toString());
     }
 
     @Retry(name = "zenodo")
     @RateLimiter(name = "zenodo")
     public ZenodoRecord getRecord(String recordId) {
-        URI uri = URI.create("https://zenodo.org/api/records/" + recordId);
+        URI uri = URI.create(props.apiBaseUrl() + recordId);
 
         return rest.get()
                 .uri(uri)
                 .exchange((req, res) -> {
                     HttpStatusCode status = res.getStatusCode();
-
                     if (status.is2xxSuccessful()) {
                         return res.bodyTo(ZenodoRecord.class);
                     }
-
-                    throwIfRetryable(status, "recordId " + recordId);
-                    throw new IllegalStateException(
+                    OaiHttpSupport.throwIfRetryable(status, "recordId " + recordId);
+                    throw new OaiHarvestException(
                             "Zenodo getRecord failed. HTTP " + status.value() + " for recordId " + recordId);
                 });
     }
@@ -65,48 +53,7 @@ public class ZenodoClient {
     @Retry(name = "zenodo")
     @RateLimiter(name = "zenodo")
     public byte[] downloadFile(String url) {
-        URI uri = toEncodedUri(url);
-
-        return rest.get()
-                .uri(uri)
-                .exchange((req, res) -> {
-                    HttpStatusCode status = res.getStatusCode();
-
-                    if (status.is2xxSuccessful()) {
-                        return res.bodyTo(byte[].class);
-                    }
-
-                    throwIfRetryable(status, url);
-                    throw new IllegalStateException(
-                            "Zenodo file download failed. HTTP " + status.value() + " for " + url);
-                });
-    }
-
-    private static URI toEncodedUri(String url) {
-        String decoded = UriUtils.decode(url, StandardCharsets.UTF_8);
-        return UriComponentsBuilder.fromUriString(decoded).encode().build().toUri();
-    }
-
-    private URI buildListRecordsUri(String baseUrl, String from, String until, String token, String metadataPrefix) {
-        UriComponentsBuilder b = UriComponentsBuilder
-                .fromUriString(baseUrl)
-                .queryParam("verb", "ListRecords");
-
-        if (token == null) {
-            b.queryParam("metadataPrefix", metadataPrefix)
-                    .queryParam("from", from)
-                    .queryParam("until", until);
-        } else {
-            b.queryParam("resumptionToken", token);
-        }
-
-        return b.build(true).toUri();
-    }
-
-    private static void throwIfRetryable(HttpStatusCode status, String context) {
-        int code = status.value();
-        if (code == 429 || code == 502 || code == 503 || code == 504) {
-            throw new RetryableApiException("Retryable Zenodo failure. HTTP " + code + " for " + context);
-        }
+        URI uri = OaiHttpSupport.toEncodedUri(url);
+        return OaiHttpSupport.executeOaiExchange(rest, uri, code -> false, url);
     }
 }

@@ -37,6 +37,33 @@ public class GrobidRestClientConfig {
                 .build();
     }
 
+    @Bean(name = "oaiRestClient")
+    public RestClient oaiRestClient(RestClient.Builder builder) {
+        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        cm.setMaxTotal(30);
+        cm.setDefaultMaxPerRoute(10);
+        // Validate idle connections before reuse — NCBI closes idle connections
+        // aggressively, causing NoHttpResponseException on stale sockets
+        cm.setValidateAfterInactivity(TimeValue.ofSeconds(2));
+
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(Timeout.ofSeconds(10))
+                .setResponseTimeout(Timeout.ofMinutes(3))
+                .build();
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(cm)
+                .setDefaultRequestConfig(requestConfig)
+                .evictIdleConnections(TimeValue.ofSeconds(10))
+                .build();
+
+        HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
+
+        return builder
+                .requestFactory(rf)
+                .build();
+    }
+
     @Bean(name = "zenodoRestClient")
     public RestClient zenodoRestClient(RestClient.Builder builder) {
         PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();

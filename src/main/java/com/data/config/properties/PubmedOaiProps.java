@@ -6,5 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record PubmedOaiProps(
         String baseUrl,
         String metadataPrefix,
-        String set
+        String set,
+        String oaServiceUrl
 ) {}

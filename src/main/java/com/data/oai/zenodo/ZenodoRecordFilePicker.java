@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-@Service
 public final class ZenodoRecordFilePicker {
 
     // Zenodo's file API returns 400 when the key contains characters that survive

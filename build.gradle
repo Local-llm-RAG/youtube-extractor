@@ -46,6 +46,8 @@ dependencies {
     implementation("com.openai:openai-java:4.17.0")
     implementation ('com.rometools:rome:2.1.0')
     implementation("org.jsoup:jsoup:1.17.2")
+    implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
+    runtimeOnly("org.glassfish.jaxb:jaxb-runtime:4.0.5")
     implementation("org.apache.tika:tika-core:3.2.3")
     implementation("org.apache.tika:tika-langdetect-optimaize:3.2.3")
 

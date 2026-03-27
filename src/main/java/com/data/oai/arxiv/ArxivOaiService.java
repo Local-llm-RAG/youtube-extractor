@@ -1,78 +1,90 @@
 package com.data.oai.arxiv;
 
 import com.data.config.properties.ArxivOaiProps;
-import com.data.oai.generic.common.dto.Author;
-import com.data.oai.generic.common.dto.Record;
-import lombok.RequiredArgsConstructor;
+import com.data.oai.pipeline.DataSource;
+import com.data.oai.shared.AbstractOaiService;
+import com.data.oai.shared.util.LicenseFilter;
+import com.data.oai.shared.util.XmlFactories;
+import com.data.oai.shared.dto.Author;
+import com.data.oai.shared.dto.OaiPage;
+import com.data.oai.shared.dto.PdfContent;
+import com.data.oai.shared.dto.Record;
+import com.data.shared.exception.OaiParseException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.events.XMLEvent;
 import java.io.ByteArrayInputStream;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
-public class ArxivOaiService {
+public class ArxivOaiService extends AbstractOaiService {
+
     private final ArxivOaiProps props;
     private final ArxivClient arxivClient;
+    private final XMLInputFactory xml = XmlFactories.newFactory(false);
 
-    private final XMLInputFactory xml = newXmlFactory();
-
-    public List<Record> getArxivPapersMetadata(String from, String until) {
-        List<Record> collectedRecords = new ArrayList<>();
-        String token = null;
-
-        do {
-            byte[] body = arxivClient.listRecords(props.baseUrl(), from, until, token);
-
-            Page page = parse(body);
-            collectedRecords.addAll(page.records);
-            token = page.resumptionToken;
-
-        } while (token != null && !token.isBlank());
-
-        return collectedRecords;
+    public ArxivOaiService(ArxivOaiProps props, ArxivClient arxivClient) {
+        this.props = props;
+        this.arxivClient = arxivClient;
     }
 
-    public AbstractMap.SimpleEntry<String, byte[]> getPdf(String arxivId) {
-        String pdfUrl = "https://arxiv.org/pdf/" + arxivId + ".pdf";
-        return new AbstractMap.SimpleEntry<>(pdfUrl, arxivClient.getPdf(pdfUrl));
+    @Override
+    public DataSource supports() {
+        return DataSource.ARXIV;
     }
 
-    public byte[] getEText(String arxivId) {
-        return arxivClient.getEText(arxivId);
+    @Override
+    protected String sourceName() {
+        return "ArXiv";
     }
 
-    private static XMLInputFactory newXmlFactory() {
-        XMLInputFactory f = XMLInputFactory.newFactory();
+    @Override
+    protected long paginationDelayMs() {
+        return props.paginationDelayMs();
+    }
+
+    @Override
+    protected byte[] callListRecords(String from, String until, String token) {
+        return arxivClient.listRecords(props.baseUrl(), from, until, token, props.metadataPrefix());
+    }
+
+    @Override
+    protected OaiPage parseResponse(byte[] xmlBytes) {
+        return parse(xmlBytes);
+    }
+
+    @Override
+    public PdfContent getPdf(String sourceId) {
+        String pdfUrl = props.pdfBaseUrl() + sourceId + ".pdf";
         try {
-            // Make namespace handling predictable for arXiv default namespaces
-            f.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
-        } catch (IllegalArgumentException ignored) {
+            return new PdfContent(pdfUrl, arxivClient.downloadFile(pdfUrl));
+        } catch (Exception e) {
+            log.warn("PDF not available for ArXiv {}: {}", sourceId, e.getMessage());
+            return null;
         }
-        return f;
     }
 
-    private Page parse(byte[] xmlBytes) {
+    // ── Source-specific XML parsing ──────────────────────────────────
+
+    private OaiPage parse(byte[] xmlBytes) {
+        XMLEventReader reader = null;
         try {
-            XMLEventReader r = xml.createXMLEventReader(new ByteArrayInputStream(xmlBytes));
+            reader = xml.createXMLEventReader(new ByteArrayInputStream(xmlBytes));
             List<Record> records = new ArrayList<>();
 
             Record cur = null;
-
             boolean inHeader = false;
             boolean inMetadata = false;
-
             String tag = null;
             String resumptionToken = null;
 
-            while (r.hasNext()) {
-                XMLEvent ev = r.nextEvent();
+            while (reader.hasNext()) {
+                XMLEvent ev = reader.nextEvent();
 
                 if (ev.isStartElement()) {
                     String name = ev.asStartElement().getName().getLocalPart();
@@ -85,8 +97,8 @@ public class ArxivOaiService {
                         case "identifier", "datestamp" -> {
                             if (inHeader) tag = name;
                         }
-                        case "id", "title", "abstract", "categories", "comments", "journal-ref", "doi", "license", "keyname",
-                             "forenames" -> {
+                        case "id", "title", "abstract", "categories", "comments",
+                             "journal-ref", "doi", "license", "keyname", "forenames" -> {
                             if (inMetadata) tag = name;
                         }
                         case "author" -> {
@@ -101,9 +113,7 @@ public class ArxivOaiService {
                     text = text.trim();
                     if (text.isEmpty()) continue;
 
-                    if (cur == null && !"token".equals(tag)) {
-                        continue;
-                    }
+                    if (cur == null && !"token".equals(tag)) continue;
 
                     switch (tag) {
                         case "identifier" -> cur.setOaiIdentifier(text);
@@ -114,14 +124,10 @@ public class ArxivOaiService {
                         case "doi" -> cur.setDoi(text);
                         case "license" -> cur.setLicense(text);
                         case "keyname" -> {
-                            if (!cur.getAuthors().isEmpty()) {
-                                cur.lastAuthor().lastName = text;
-                            }
+                            if (!cur.getAuthors().isEmpty()) cur.lastAuthor().lastName = text;
                         }
                         case "forenames" -> {
-                            if (!cur.getAuthors().isEmpty()) {
-                                cur.lastAuthor().firstName = text;
-                            }
+                            if (!cur.getAuthors().isEmpty()) cur.lastAuthor().firstName = text;
                         }
                         case "token" -> resumptionToken = text;
                         case "id" -> cur.setSourceId(text);
@@ -135,7 +141,7 @@ public class ArxivOaiService {
                     if ("metadata".equals(name)) inMetadata = false;
 
                     if ("record".equals(name)) {
-                        if (cur != null && isCommerciallyUsableLicense(cur.getLicense())) {
+                        if (cur != null && LicenseFilter.isAcceptableByUrlWhitelist(cur.getLicense())) {
                             records.add(cur);
                         }
                         cur = null;
@@ -149,29 +155,16 @@ public class ArxivOaiService {
                 }
             }
 
-            return new Page(records, resumptionToken);
+            return new OaiPage(records, resumptionToken);
         } catch (Exception e) {
-            throw new RuntimeException("OAI parse failed", e);
+            throw new OaiParseException("ArXiv OAI parse failed", e);
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (Exception ignored) {
+                }
+            }
         }
-    }
-
-    private boolean isCommerciallyUsableLicense(String license) {
-        if (license == null || license.isBlank()) {
-            return false;
-        }
-
-        String l = license.trim().toLowerCase(Locale.ROOT);
-
-        // Normalize http/https
-        l = l.replace("http://", "https://");
-
-        // Explicit whitelist
-        return l.equals("https://creativecommons.org/licenses/by/4.0/")
-                || l.equals("https://creativecommons.org/licenses/by-sa/4.0/")
-                || l.equals("https://creativecommons.org/licenses/by-nd/4.0/") // only if you decide ND is acceptable
-                || l.equals("https://creativecommons.org/publicdomain/zero/1.0/");
-    }
-
-    private record Page(List<Record> records, String resumptionToken) {
     }
 }
