@@ -4,6 +4,7 @@ import com.data.oai.generic.common.dto.Author;
 import com.data.oai.generic.common.dto.Record;
 import com.data.config.properties.ZenodoOaiProps;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.xml.namespace.QName;
@@ -20,6 +21,7 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ZenodoOaiService {
 
     private final ZenodoOaiProps props;
@@ -36,11 +38,15 @@ public class ZenodoOaiService {
             Page page = parseDatacite(body);
 
             collected.addAll(page.records);
+
+            log.info("Collected zenodo papers: {} for time - from: {} until: {}", collected.size(), from, until);
+
             token = page.resumptionToken;
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-                continue;
+                Thread.currentThread().interrupt();
+                break;
             }
         } while (token != null && !token.isBlank());
 
