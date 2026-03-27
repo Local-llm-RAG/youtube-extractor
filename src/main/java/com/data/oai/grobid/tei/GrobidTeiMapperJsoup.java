@@ -24,12 +24,14 @@ import static com.data.oai.grobid.tei.GrobidTeiUtils.normalizeWs;
  */
 public final class GrobidTeiMapperJsoup {
 
+    private static final String NO_CONTENT_MARKER = "NO_CONTENT";
+
     private GrobidTeiMapperJsoup() {}
 
     public static PaperDocument toPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
         if (teiXml == null || teiXml.isBlank()) {
             return new PaperDocument(arxivId, oaiIdentifier, null, null,
-                    List.of(new Section("BODY", 1, "", List.of())), teiXml, "NO_CONTENT",
+                    List.of(new Section("BODY", 1, "", List.of())), teiXml, NO_CONTENT_MARKER,
                     List.of(), List.of(), List.of(), List.of(), null);
         }
 

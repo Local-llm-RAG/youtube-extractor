@@ -35,17 +35,22 @@ public class GrobidClient {
                 .body(String.class);
     }
 
-    private static MultipartBodyBuilder buildGrobidRequest(byte[] pdfBytes, String filename) {
+    private MultipartBodyBuilder buildGrobidRequest(byte[] pdfBytes, String filename) {
+        GrobidProperties.Options opts = props.options();
         MultipartBodyBuilder mb = new MultipartBodyBuilder();
         mb.part("input", pdfBytes)
                 .filename(filename)
                 .contentType(MediaType.APPLICATION_PDF);
 
-        mb.part("consolidateHeader", "1");
-        mb.part("consolidateCitations", "1");
-        mb.part("segmentSentences", "1");
-        mb.part("includeRawCitations", "1");
-        mb.part("includeRawAffiliations", "1");
+        mb.part("consolidateHeader", boolToFlag(opts.consolidateHeader()));
+        mb.part("consolidateCitations", boolToFlag(opts.consolidateCitations()));
+        mb.part("segmentSentences", boolToFlag(opts.segmentSentences()));
+        mb.part("includeRawCitations", boolToFlag(opts.includeRawCitations()));
+        mb.part("includeRawAffiliations", boolToFlag(opts.includeRawAffiliations()));
         return mb;
+    }
+
+    private static String boolToFlag(boolean value) {
+        return value ? "1" : "0";
     }
 }

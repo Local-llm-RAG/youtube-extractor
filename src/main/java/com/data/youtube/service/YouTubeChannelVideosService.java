@@ -24,6 +24,8 @@ import static java.util.stream.Collectors.toMap;
 @RequiredArgsConstructor
 public class YouTubeChannelVideosService {
 
+    private static final int YOUTUBE_VIDEO_ID_LENGTH = 11;
+
     private final YouTubeClientService youtubeClientService;
     private final YouTubeInternalService youtubeInternalService;
     private final ApplicationEventPublisher publisher;
@@ -171,7 +173,7 @@ public class YouTubeChannelVideosService {
                         int idx = kv.indexOf('=');
                         if (idx > 0 && "v".equals(kv.substring(0, idx))) {
                             String v = kv.substring(idx + 1);
-                            if (v.length() >= 11) return v.substring(0, 11);
+                            if (v.length() >= YOUTUBE_VIDEO_ID_LENGTH) return v.substring(0, YOUTUBE_VIDEO_ID_LENGTH);
                         }
                     }
                 }

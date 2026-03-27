@@ -9,7 +9,6 @@ import org.springframework.batch.core.job.JobExecution;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
@@ -19,19 +18,18 @@ import java.util.stream.IntStream;
 public class OAIProcessorService implements Job {
 
     private final GenericFacade genericFacade;
+    private final OaiProcessingProperties processingProps;
 
     @Override
     public void execute(@NotNull JobExecution execution) {
-        int daysBack = 90;
-
-        List.of(DataSource.ARXIV)
+        processingProps.sources()
                 .forEach(dataSource -> {
-                    IntStream.range(0, daysBack)
+                    log.info("Starting OAI processing for {} ({} days back)", dataSource, processingProps.daysBack());
+                    IntStream.range(0, processingProps.daysBack())
                             .mapToObj(i -> genericFacade.getTracker(LocalDate.now().minusDays(i), dataSource))
                             .filter(Objects::nonNull)
                             .forEach(genericFacade::processCollectedArxivRecord);
                 });
-
     }
 
     @Override

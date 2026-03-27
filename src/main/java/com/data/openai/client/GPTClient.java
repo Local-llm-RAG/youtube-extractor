@@ -22,18 +22,20 @@ import java.util.function.Supplier;
 @Service
 @Slf4j
 public class GPTClient {
-    private static final ChatModel MODEL = ChatModel.GPT_5_2;
-
-    private final OpenAIClient client;
-
-    private static final BigDecimal INPUT_USD_PER_1M = new BigDecimal("0.25");
-    private static final BigDecimal OUTPUT_USD_PER_1M = new BigDecimal("2");
     private static final BigDecimal ONE_MILLION = new BigDecimal("1000000");
+    private static final long OVERHEAD_TOKENS = 20;
 
+    private final ChatModel model;
+    private final OpenAIClient client;
+    private final BigDecimal inputUsdPer1m;
+    private final BigDecimal outputUsdPer1m;
     private final Encoding encoding;
 
     public GPTClient(GptProperties gptProperties) {
         this.client = OpenAIOkHttpClient.builder().apiKey(gptProperties.key()).build();
+        this.model = ChatModel.of(gptProperties.model());
+        this.inputUsdPer1m = new BigDecimal(gptProperties.pricing().inputUsdPer1m());
+        this.outputUsdPer1m = new BigDecimal(gptProperties.pricing().outputUsdPer1m());
         this.encoding = Encodings.newLazyEncodingRegistry().getEncoding(EncodingType.O200K_BASE);
     }
 
@@ -44,8 +46,7 @@ public class GPTClient {
     ) {
         long systemTokens = encoding.countTokens(systemPrompt);
         long userTokens = encoding.countTokens(userPrompt);
-        long overheadTokens = 20; // Adding extra start and end tokens
-        long promptTokens = systemTokens + userTokens + overheadTokens;
+        long promptTokens = systemTokens + userTokens + OVERHEAD_TOKENS;
         BigDecimal promptUsd = usdForInputTokens(promptTokens);
 
         BigDecimal avgCompletionTokens =
@@ -54,7 +55,7 @@ public class GPTClient {
 
         BigDecimal avgCompletionUsd =
                 avgCompletionTokens
-                        .multiply(OUTPUT_USD_PER_1M)
+                        .multiply(outputUsdPer1m)
                         .divide(ONE_MILLION, 8, RoundingMode.HALF_UP);
 
         BigDecimal avgUsd = promptUsd.add(avgCompletionUsd);
@@ -69,7 +70,7 @@ public class GPTClient {
     public GPTTextResult requestText(String systemPrompt, String userPrompt, Supplier<? extends RuntimeException> exceptionSupplier) {
 
         ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
-                .model(MODEL)
+                .model(model)
                 .addSystemMessage(systemPrompt)
                 .addUserMessage(userPrompt)
                 .build();
@@ -96,13 +97,13 @@ public class GPTClient {
     }
 
     private BigDecimal usdForInputTokens(long tokens) {
-        return INPUT_USD_PER_1M
+        return inputUsdPer1m
                 .multiply(BigDecimal.valueOf(tokens))
                 .divide(ONE_MILLION, 8, RoundingMode.HALF_UP);
     }
 
     private BigDecimal usdForOutputTokens(long tokens) {
-        return OUTPUT_USD_PER_1M
+        return outputUsdPer1m
                 .multiply(BigDecimal.valueOf(tokens))
                 .divide(ONE_MILLION, 8, RoundingMode.HALF_UP);
     }
@@ -114,7 +115,7 @@ public class GPTClient {
             Class<T> responseClass
     ) {
         return ChatCompletionCreateParams.builder()
-                .model(MODEL)
+                .model(model)
                 .addSystemMessage(systemMessage)
                 .addUserMessage(prompt)
                 .responseFormat(responseClass)

@@ -13,6 +13,9 @@ import java.net.URI;
 @Service
 public class PubmedClient {
 
+    private static final String NCBI_FTP_PREFIX = "ftp://ftp.ncbi.nlm.nih.gov/";
+    private static final String NCBI_HTTPS_PREFIX = "https://ftp.ncbi.nlm.nih.gov/";
+
     private final RestClient rest;
     private final PubmedOaiProps props;
 
@@ -40,8 +43,7 @@ public class PubmedClient {
     @Retry(name = "pubmed")
     @RateLimiter(name = "pubmed")
     public byte[] downloadPdf(String url) {
-        String httpsUrl = url.replace("ftp://ftp.ncbi.nlm.nih.gov/",
-                "https://ftp.ncbi.nlm.nih.gov/");
+        String httpsUrl = url.replace(NCBI_FTP_PREFIX, NCBI_HTTPS_PREFIX);
         URI uri = URI.create(httpsUrl);
         return OaiHttpSupport.executeOaiExchange(rest, uri, code -> false, url);
     }

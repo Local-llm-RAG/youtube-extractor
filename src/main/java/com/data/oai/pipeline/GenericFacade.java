@@ -32,6 +32,9 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class GenericFacade {
 
+    private static final int TRACKER_PERSIST_INTERVAL = 10;
+    private static final String DEFAULT_LANGUAGE = "en";
+
     private final OaiSourceRegistry sourceRegistry;
     private final GrobidService grobidService;
     private final PaperInternalService paperInternalService;
@@ -117,7 +120,7 @@ public class GenericFacade {
 
             tracker.setProcessedPapersForPeriod(newVal);
 
-            if (newVal % 10 == 0) {
+            if (newVal % TRACKER_PERSIST_INTERVAL == 0) {
                 trackerService.persistTracker(tracker);
             }
         }
@@ -128,12 +131,12 @@ public class GenericFacade {
             LanguageResult result = languageDetector.detect(text);
             if (result.isUnknown()) {
                 log.warn("Unknown language for sourceId={}", sourceId);
-                return "en";
+                return DEFAULT_LANGUAGE;
             }
             return result.getLanguage();
         } catch (Exception e) {
             log.error("Language detection failed for sourceId={}", sourceId, e);
-            return "en";
+            return DEFAULT_LANGUAGE;
         }
     }
 

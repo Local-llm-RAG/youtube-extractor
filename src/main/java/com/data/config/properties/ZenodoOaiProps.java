@@ -6,5 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ZenodoOaiProps(
         String baseUrl,
         String metadataPrefix,
-        String apiBaseUrl
+        String apiBaseUrl,
+        long paginationDelayMs
 ) {}

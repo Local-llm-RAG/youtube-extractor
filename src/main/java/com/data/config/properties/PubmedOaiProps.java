@@ -7,5 +7,6 @@ public record PubmedOaiProps(
         String baseUrl,
         String metadataPrefix,
         String set,
-        String oaServiceUrl
+        String oaServiceUrl,
+        long paginationDelayMs
 ) {}

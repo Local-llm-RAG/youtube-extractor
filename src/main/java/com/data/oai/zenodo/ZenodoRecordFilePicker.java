@@ -1,8 +1,7 @@
 package com.data.oai.zenodo;
 
-import org.springframework.stereotype.Service;
-
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public final class ZenodoRecordFilePicker {
@@ -11,6 +10,10 @@ public final class ZenodoRecordFilePicker {
     // URL-encoding but break their backend routing (quotes, angle brackets, etc.).
     // Allow only printable ASCII minus the known-bad set.
     private static final Pattern UNSAFE_KEY = Pattern.compile("[\"<>{}|\\\\^`\\[\\]]");
+    private static final long MIN_PDF_SIZE_BYTES = 40_000;
+    private static final Set<String> REJECTED_SUBTYPES = Set.of(
+            "taxonomictreatment", "poster", "presentation", "slides"
+    );
 
     private ZenodoRecordFilePicker() {}
 
@@ -39,14 +42,11 @@ public final class ZenodoRecordFilePicker {
         if (pdf == null) return false;
 
         long size = pdf.getSize() == null ? 0 : pdf.getSize();
-        if (size < 40_000) return false; // 40 KB
+        if (size < MIN_PDF_SIZE_BYTES) return false;
 
         if (rt != null && rt.getSubtype() != null) {
             String subtype = rt.getSubtype().toLowerCase(Locale.ROOT);
-            if (subtype.contains("taxonomictreatment")) return false;
-            if (subtype.contains("poster")) return false;
-            if (subtype.contains("presentation")) return false;
-            if (subtype.contains("slides")) return false;
+            if (REJECTED_SUBTYPES.stream().anyMatch(subtype::contains)) return false;
         }
 
         return true;

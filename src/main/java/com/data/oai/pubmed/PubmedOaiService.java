@@ -48,7 +48,12 @@ public class PubmedOaiService extends AbstractOaiService {
     private static final Pattern DOI_PATTERN =
             Pattern.compile("(?:https?://doi\\.org/|doi:\\s*)(10\\..+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern PMC_ID_PATTERN = Pattern.compile("PMC(\\d+)");
-    private static final long PAGINATION_DELAY_MS = 350;
+
+    private static final int TAR_BLOCK_SIZE = 512;
+    private static final int TAR_NAME_OFFSET = 0;
+    private static final int TAR_NAME_LENGTH = 100;
+    private static final int TAR_SIZE_OFFSET = 124;
+    private static final int TAR_SIZE_LENGTH = 12;
 
     public PubmedOaiService(PubmedOaiProps props, PubmedClient pubmedClient) {
         this.props = props;
@@ -67,7 +72,7 @@ public class PubmedOaiService extends AbstractOaiService {
 
     @Override public DataSource supports() { return DataSource.PUBMED; }
     @Override protected String sourceName() { return "PMC"; }
-    @Override protected long paginationDelayMs() { return PAGINATION_DELAY_MS; }
+    @Override protected long paginationDelayMs() { return props.paginationDelayMs(); }
 
     @Override
     protected byte[] callListRecords(String from, String until, String token) {
@@ -155,22 +160,22 @@ public class PubmedOaiService extends AbstractOaiService {
         try (var gzipIn = new java.util.zip.GZIPInputStream(new ByteArrayInputStream(tgzBytes))) {
             byte[] tarBytes = gzipIn.readAllBytes();
             int offset = 0;
-            while (offset + 512 <= tarBytes.length) {
-                String name = new String(tarBytes, offset, 100, java.nio.charset.StandardCharsets.US_ASCII).trim();
+            while (offset + TAR_BLOCK_SIZE <= tarBytes.length) {
+                String name = new String(tarBytes, offset + TAR_NAME_OFFSET, TAR_NAME_LENGTH, java.nio.charset.StandardCharsets.US_ASCII).trim();
                 if (name.isEmpty()) break;
 
-                String sizeStr = new String(tarBytes, offset + 124, 12, java.nio.charset.StandardCharsets.US_ASCII).trim();
+                String sizeStr = new String(tarBytes, offset + TAR_SIZE_OFFSET, TAR_SIZE_LENGTH, java.nio.charset.StandardCharsets.US_ASCII).trim();
                 if (sizeStr.isEmpty()) break;
                 long size = Long.parseLong(sizeStr, 8);
 
-                int dataOffset = offset + 512;
+                int dataOffset = offset + TAR_BLOCK_SIZE;
                 if (name.toLowerCase(Locale.ROOT).endsWith(".pdf") && size > 0) {
                     byte[] pdfBytes = new byte[(int) size];
                     System.arraycopy(tarBytes, dataOffset, pdfBytes, 0, (int) size);
                     return pdfBytes;
                 }
 
-                offset = dataOffset + (int) ((size + 511) / 512 * 512);
+                offset = dataOffset + (int) ((size + TAR_BLOCK_SIZE - 1) / TAR_BLOCK_SIZE * TAR_BLOCK_SIZE);
             }
         } catch (Exception e) {
             log.warn("Failed to extract PDF from tgz", e);
@@ -275,7 +280,7 @@ public class PubmedOaiService extends AbstractOaiService {
                                     cur.setLicense(LicenseFilter.normalizeLicense(cur.getLicense()));
                                 }
                                 if (cur.getLicense() == null) {
-                                    cur.setLicense("https://creativecommons.org/licenses/by/4.0/");
+                                    cur.setLicense(LicenseFilter.DEFAULT_OPEN_ACCESS_LICENSE);
                                 }
                                 if (LicenseFilter.isPermissiveLicense(cur.getLicense(), true, false)
                                         && isLikelyScholarlyText(cur)) {

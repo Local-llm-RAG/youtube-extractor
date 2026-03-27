@@ -73,16 +73,22 @@ springdoc:
 
 gpt:
   key: ${GPT_API_KEY}
+  model: gpt-5-2
+  pricing:
+    input-usd-per-1m: "0.25"
+    output-usd-per-1m: "2"
 
 arxiv:
   search-url: https://export.arxiv.org/api/query?search_query=
 oai:
   processing:
     days-back: 90
+    sources: ARXIV
   zenodo:
     base-url: https://zenodo.org/oai2d
     metadata-prefix: oai_datacite
     api-base-url: https://zenodo.org/api/records/
+    pagination-delay-ms: 500
   arxiv:
     base-url: "https://export.arxiv.org/oai2"
     metadata-prefix: arXiv
@@ -93,12 +99,19 @@ oai:
     metadata-prefix: oai_dc
     set: pmc-open
     oa-service-url: "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
+    pagination-delay-ms: 350
 grobid:
   base-url: http://localhost:8070
   fulltext-endpoint: /api/processFulltextDocument
   client:
     concurrency: 8
     queue: 16
+  options:
+    consolidate-header: true
+    consolidate-citations: true
+    segment-sentences: true
+    include-raw-citations: true
+    include-raw-affiliations: true
 
 resilience4j:
   circuitbreaker:

@@ -19,7 +19,7 @@ public class QdrantScheduler {
 
     private final List<Job> jobs;
 
-    @Scheduled(cron = "0 5 0 * * ?")
+    @Scheduled(cron = "${scheduling.qdrant-batch-cron:0 5 0 * * ?}")
     public void performBatchJob() {
 //        jobs.stream()
 //                .filter(job -> job instanceof QdrantProcessorService)
@@ -34,7 +34,7 @@ public class QdrantScheduler {
 //                });
     }
 
-    @Scheduled(cron = "0 0 5 * * ?")
+    @Scheduled(cron = "${scheduling.oai-extraction-cron:0 0 5 * * ?}")
     public void performOAIExtraction() {
 //        jobs.stream()
 //                .filter(job -> job instanceof OAIProcessorService)

@@ -7,6 +7,13 @@ import java.util.Locale;
  */
 public final class LicenseFilter {
 
+    private static final String CC_BY_4 = "https://creativecommons.org/licenses/by/4.0/";
+    private static final String CC_BY_SA_4 = "https://creativecommons.org/licenses/by-sa/4.0/";
+    private static final String CC0_1 = "https://creativecommons.org/publicdomain/zero/1.0/";
+
+    /** CC-BY 4.0 — the default open-access license assumed for PMC pmc-open records. */
+    public static final String DEFAULT_OPEN_ACCESS_LICENSE = CC_BY_4;
+
     private LicenseFilter() {}
 
     /**
@@ -32,9 +39,9 @@ public final class LicenseFilter {
         String l = license.trim().toLowerCase(Locale.ROOT);
         l = l.replace("http://", "https://");
 
-        return l.equals("https://creativecommons.org/licenses/by/4.0/")
-                || l.equals("https://creativecommons.org/licenses/by-sa/4.0/")
-                || l.equals("https://creativecommons.org/publicdomain/zero/1.0/");
+        return l.equals(CC_BY_4)
+                || l.equals(CC_BY_SA_4)
+                || l.equals(CC0_1);
     }
 
     /**

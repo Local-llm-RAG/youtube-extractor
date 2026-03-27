@@ -27,8 +27,6 @@ import java.util.List;
 @Service
 public class ZenodoOaiService extends AbstractOaiService {
 
-    private static final long PAGINATION_DELAY_MS = 500;
-
     private final ZenodoOaiProps props;
     private final ZenodoClient zenodoClient;
     private final XMLInputFactory xml = XmlFactories.newFactory(true);
@@ -40,7 +38,7 @@ public class ZenodoOaiService extends AbstractOaiService {
 
     @Override public DataSource supports() { return DataSource.ZENODO; }
     @Override protected String sourceName() { return "Zenodo"; }
-    @Override protected long paginationDelayMs() { return PAGINATION_DELAY_MS; }
+    @Override protected long paginationDelayMs() { return props.paginationDelayMs(); }
 
     @Override
     protected byte[] callListRecords(String from, String until, String token) {
