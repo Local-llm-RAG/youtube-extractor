@@ -32,7 +32,6 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class GenericFacade {
 
-    private static final int TRACKER_PERSIST_INTERVAL = 10;
     private static final String DEFAULT_LANGUAGE = "en";
 
     private final OaiSourceRegistry sourceRegistry;
@@ -78,15 +77,20 @@ public class GenericFacade {
                 .filter(r -> isNull(onlyArxivIds) || onlyArxivIds.contains(r.getSourceId()))
                 .toList();
         tracker.setProcessedPapersForPeriod(allRecords.size() - unprocessed.size());
-        AtomicInteger processed = new AtomicInteger(tracker.getProcessedPapersForPeriod());
+
+        // Persist initial tracker state (allPapersForPeriod, initial processedCount) from the main thread
+        trackerService.persistTracker(tracker);
+
+        AtomicInteger processed = new AtomicInteger(0);
 
         List<CompletableFuture<Void>> futures = unprocessed.stream()
-                .map(r -> CompletableFuture.runAsync(() -> processOne(handler, tracker, r, processed), grobidPool))
+                .map(r -> CompletableFuture.runAsync(
+                        () -> processOne(handler, tracker, r, processed), grobidPool))
                 .toList();
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-        log.info("Processed {} records with GROBID", unprocessed.size());
+        log.info("Processed {} records with GROBID", processed.get());
     }
 
     private void processOne(OaiSourceHandler handler, Tracker tracker, Record apiRecord, AtomicInteger processed) {
@@ -114,21 +118,20 @@ public class GenericFacade {
                     grobidDoc,
                     pdfResult.url());
         } catch (Exception e) {
-            log.warn("Failed to process arXivId={} with GROBID", sourceId, e);
+            log.warn("Failed to process sourceId={} with GROBID", sourceId, e);
         } finally {
-            int newVal = processed.incrementAndGet();
-
-            tracker.setProcessedPapersForPeriod(newVal);
-
-            if (newVal % TRACKER_PERSIST_INTERVAL == 0) {
-                trackerService.persistTracker(tracker);
-            }
+            // Atomically increment at DB level — thread-safe, no JPA entity mutation from pool threads
+            trackerService.incrementProcessed(tracker.getId());
+            processed.incrementAndGet();
         }
     }
 
     private String detectLang(String text, String sourceId) {
         try {
-            LanguageResult result = languageDetector.detect(text);
+            LanguageResult result;
+            synchronized (languageDetector) {
+                result = languageDetector.detect(text);
+            }
             if (result.isUnknown()) {
                 log.warn("Unknown language for sourceId={}", sourceId);
                 return DEFAULT_LANGUAGE;

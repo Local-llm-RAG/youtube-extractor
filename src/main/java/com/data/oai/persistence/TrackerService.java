@@ -18,10 +18,13 @@ public class TrackerService {
     public Tracker getTracker(LocalDate startDate, DataSource dataSource) {
         Optional<Tracker> trackerForDate = trackerRepository.findByDateStartAndDataSource(startDate, dataSource);
         if (trackerForDate.isPresent()) {
-            // Not finished processing
-            if (trackerForDate.get().getProcessedPapersForPeriod() != 0 && !trackerForDate.get().getAllPapersForPeriod().equals(trackerForDate.get().getProcessedPapersForPeriod())) {
-                return trackerForDate.get();
-            } else return null; // skip the ones that are fully processed
+            Tracker tracker = trackerForDate.get();
+            // Skip only when fully processed (all > 0 and all == processed)
+            if (tracker.getAllPapersForPeriod() > 0
+                    && tracker.getAllPapersForPeriod().equals(tracker.getProcessedPapersForPeriod())) {
+                return null;
+            }
+            return tracker;
         } else {
             return Tracker.builder()
                     .allPapersForPeriod(0)
@@ -36,5 +39,14 @@ public class TrackerService {
     @Transactional
     public void persistTracker(Tracker tracker) {
         trackerRepository.save(tracker);
+    }
+
+    /**
+     * Atomically increments the processed count at the DB level.
+     * Thread-safe — can be called from multiple GROBID pool threads concurrently.
+     */
+    @Transactional
+    public void incrementProcessed(Long trackerId) {
+        trackerRepository.incrementProcessed(trackerId);
     }
 }

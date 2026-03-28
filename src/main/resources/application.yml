@@ -123,8 +123,8 @@ resilience4j:
         failureRateThreshold: 50
         permittedNumberOfCallsInHalfOpenState: 1
         waitDurationInOpenState: 30m
-#        recordExceptions:
-#          - com.youtube.external.exception.TranscriptRateLimitedException
+        recordExceptions:
+          - com.data.shared.exception.TranscriptRateLimitedException
   ratelimiter:
     instances:
       transcript:
@@ -148,8 +148,8 @@ resilience4j:
     instances:
       transcript:
         maxAttempts: 2
-#        retryExceptions:
-#          - com.youtube.external.exception.TranscriptRateLimitedException
+        retryExceptions:
+          - com.data.shared.exception.TranscriptRateLimitedException
         waitDuration: 60s
         enableExponentialBackoff: true
         exponentialBackoffMultiplier: 2.0

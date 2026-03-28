@@ -15,7 +15,7 @@ import java.util.List;
 @Table(
     name = "source_record",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uq_publication_record_source_identifier", columnNames = "arxiv_id"),
+        @UniqueConstraint(name = "uq_publication_record_source_identifier", columnNames = "source_identifier"),
         @UniqueConstraint(name = "uq_publication_record_oai_identifier", columnNames = "oai_identifier")
     }
 )
@@ -87,7 +87,7 @@ public class RecordEntity {
     @Enumerated(EnumType.STRING)
     private DataSource dataSource;
 
-    @Column(name = "pdf_url", nullable = false)
+    @Column(name = "pdf_url")
     private String pdfUrl;
 
     @PrePersist

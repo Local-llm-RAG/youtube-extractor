@@ -9,6 +9,8 @@ import io.qdrant.client.QdrantClient;
 import io.qdrant.client.grpc.Common;
 import io.qdrant.client.grpc.JsonWithInt;
 import io.qdrant.client.grpc.Points;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -17,6 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
+@Slf4j
 @Component
 public class QdrantGrpcClient {
     private final QdrantClient client;
@@ -29,6 +32,15 @@ public class QdrantGrpcClient {
                 .withApiKey(config.getApiKey())
                 .build()
         );
+    }
+
+    @PreDestroy
+    public void close() {
+        try {
+            client.close();
+        } catch (Exception e) {
+            log.warn("Error closing Qdrant gRPC client", e);
+        }
     }
 
     public void insertPoints(ChannelEntity channel,

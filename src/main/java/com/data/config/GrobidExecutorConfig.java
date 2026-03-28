@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class GrobidExecutorConfig {
 
-    @Bean(name = "grobidExecutor")
+    @Bean(name = "grobidExecutor", destroyMethod = "shutdown")
     public ExecutorService grobidExecutor(GrobidProperties props) {
         return new ThreadPoolExecutor(
                 props.client().concurrency(),

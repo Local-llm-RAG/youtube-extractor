@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Table(
         name = "tracker",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uq_tracker_period", columnNames = {"date_start", "date_end"})
+                @UniqueConstraint(name = "uq_tracker_period", columnNames = {"date_start", "date_end", "data_source"})
         }
 )
 @Data

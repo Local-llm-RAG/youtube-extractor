@@ -46,29 +46,28 @@ Harvests metadata from ArXiv, Zenodo, and PubMed Central using the OAI-PMH proto
 ```
 oai/
 ├── pipeline/                    # Pipeline orchestration
-│   ├── OAIProcessorService            # Spring Batch job runner (90-day windows)
+│   ├── OAIProcessorService            # Spring Batch job runner (configurable days-back + sources)
 │   ├── GenericFacade                  # Coordinates fetch → filter → download → GROBID → persist
 │   ├── OaiSourceHandler               # Strategy interface for data sources
 │   ├── OaiSourceRegistry              # Resolves handler by DataSource enum
-│   ├── ArxivSourceHandler             # ArXiv implementation
-│   ├── PubmedSourceHandler            # PubMed Central implementation
-│   ├── ZenodoSourceHandler            # Zenodo implementation
 │   └── DataSource                     # Enum: ARXIV, ZENODO, PUBMED
-├── arxiv/                       # ArXiv OAI client
-│   ├── ArxivClient                    # HTTP client for ArXiv OAI-PMH
-│   ├── ArxivOaiService                # XML parsing and record mapping
+├── arxiv/                       # ArXiv OAI client + service
+│   ├── ArxivClient                    # HTTP client (uses OaiHttpSupport)
+│   ├── ArxivOaiService                # Extends AbstractOaiService; ArXiv XML parsing
 │   └── search/                  # ArXiv search REST API
 │       ├── ArxivController            # POST /api/arxiv/search
 │       ├── ArxivService               # Search orchestration (triggers pipeline)
 │       ├── ArxivSearchRequest         # Request DTO
 │       ├── ArxivIdExtractor           # Extracts IDs from ArXiv URLs
 │       └── Paper                      # Response DTO
-├── pubmed/                      # PubMed Central OAI client
-│   ├── PubmedClient                   # HTTP client for PMC OAI-PMH
-│   └── PubmedOaiService               # XML parsing and record mapping
-├── zenodo/                      # Zenodo OAI client
-│   ├── ZenodoClient                   # HTTP client for Zenodo OAI-PMH
-│   ├── ZenodoOaiService               # XML/JSON parsing and record mapping
+├── pubmed/                      # PubMed Central OAI client + service
+│   ├── PubmedClient                   # HTTP client (uses OaiHttpSupport)
+│   ├── PubmedOaiService               # Extends AbstractOaiService; Dublin Core parsing
+│   └── oa/                      # JAXB model for PMC OA Web Service
+│       ├── OaResponse, OaRecords, OaRecord, OaLink
+├── zenodo/                      # Zenodo OAI client + service
+│   ├── ZenodoClient                   # HTTP client (uses OaiHttpSupport)
+│   ├── ZenodoOaiService               # Extends AbstractOaiService; DataCite parsing
 │   ├── ZenodoRecordFilePicker         # Selects best PDF from Zenodo files
 │   ├── ZenodoJson, ZenodoRecord       # Zenodo API response models
 ├── grobid/                      # PDF processing via GROBID
@@ -97,14 +96,17 @@ oai/
 │   ├── PaperInternalService           # Persistence orchestration (record → document → sections)
 │   ├── TrackerService                 # Tracker CRUD operations
 │   └── SectionFilter                  # Query helper for section filtering
-├── shared/                      # Shared DTOs and utilities
+├── shared/                      # Shared OAI contracts
+│   ├── AbstractOaiService             # Template method base for all OAI source services
 │   ├── dto/                     # Domain transfer objects
 │   │   ├── Record                     # Parsed OAI record (pre-persistence)
+│   │   ├── OaiPage                    # Single page of OAI ListRecords results
 │   │   ├── Author                     # Author name model
 │   │   ├── PaperDocument              # Full parsed paper with sections/refs
 │   │   ├── Section, Reference         # Paper section and reference models
 │   │   └── PdfContent                 # Downloaded PDF bytes + metadata
 │   └── util/                    # Stateless utilities
+│       ├── OaiHttpSupport             # Shared HTTP utilities (URI building, exchange, retryable)
 │       ├── AuthorNameParser           # Parses "Last, First" / "First Last"
 │       ├── DateParser                 # Date string parsing
 │       ├── DoiNormalizer              # Normalizes DOI formats
@@ -249,9 +251,11 @@ youtube ──────► embedding ◄────── oai
 
 | Pattern | Where | Purpose |
 |---------|-------|---------|
-| Strategy + Registry | `oai/pipeline/OaiSourceHandler` + `OaiSourceRegistry` | Pluggable data sources (ArXiv, Zenodo, PMC) |
+| Template Method + Strategy | `AbstractOaiService` + `OaiSourceHandler` + `OaiSourceRegistry` | Shared pagination loop with pluggable parsing/PDF resolution per source |
+| Shared HTTP utilities | `OaiHttpSupport.executeOaiExchange` | Eliminates duplicated exchange handlers across OAI clients |
 | Facade | `oai/pipeline/GenericFacade` | Coordinates multi-step OAI processing pipeline |
 | Event-driven | `youtube/event/` | Async transcript download on video discovery |
 | Entity/Repository split | `*/persistence/entity/` + `*/persistence/repository/` | Clear separation of JPA entities from data access |
 | DTO/Util split | `oai/shared/dto/` + `oai/shared/util/` | Separates data models from stateless utilities |
 | TEI extraction layer | `oai/grobid/tei/` | Isolates complex XML parsing from service orchestration |
+| JAXB mapping | `oai/pubmed/oa/` | Declarative XML-to-object binding for PMC OA Web Service |

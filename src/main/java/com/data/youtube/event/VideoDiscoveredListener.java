@@ -83,7 +83,7 @@ public class VideoDiscoveredListener {
             } else {
                 log.error("[TRANSCRIPT][HTTP_ERROR] videoId={} status={} msg={}", youtubeVideoId, status, e.getMessage());
             }
-            throw e;
+            // Do not re-throw — let the transaction commit so transcriptPassed=false is persisted
 
         } catch (Exception e) {
             video.setTranscriptPassed(false);

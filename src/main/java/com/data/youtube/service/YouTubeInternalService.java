@@ -127,14 +127,15 @@ public class YouTubeInternalService {
 
     public List<Video> findAllVideosForChannelWithCategories(ChannelEntity channel, Map<String, Map<String, String>> categoryMap, List<com.google.api.services.youtube.model.Video> externalDto) {
         List<Video> videosFromDb = videoRepository.findVideosByChannel(channel);
-        videosFromDb.forEach(dbVideo -> {
-            com.google.api.services.youtube.model.Video externalVideo = externalDto.stream().filter(extDto -> extDto.getId().equals(dbVideo.getYoutubeVideoId()))
+        videosFromDb.forEach(dbVideo ->
+            externalDto.stream()
+                    .filter(extDto -> extDto.getId().equals(dbVideo.getYoutubeVideoId()))
                     .findFirst()
-                    .orElseThrow();
-            String categoryId = externalVideo.getSnippet().getCategoryId();
-
-            setCategories(categoryMap, dbVideo, categoryId);
-        });
+                    .ifPresent(externalVideo -> {
+                        String categoryId = externalVideo.getSnippet().getCategoryId();
+                        setCategories(categoryMap, dbVideo, categoryId);
+                    })
+        );
 
         return videosFromDb;
     }
