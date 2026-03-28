@@ -6,11 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record GrobidProperties(
         String baseUrl,
         String fulltextEndpoint,
-        Client client,
+        HttpClientProperties httpClient,
         Options options
 ) {
-    public record Client(int concurrency, int queue) {}
-
     public record Options(
             boolean consolidateHeader,
             boolean consolidateCitations,

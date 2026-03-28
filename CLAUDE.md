@@ -57,7 +57,7 @@ OAIProcessorService  →  GenericFacade
                  └─ callListRecords() → {Source}Client → OAI-PMH API
                  └─ parseResponse() → source-specific XML parsing
   └─ Filter: skip already-processed IDs
-  └─ Async via grobidExecutor:
+  └─ Async via oaiExecutor:
        └─ {Source}OaiService.getPdf() → PDF bytes
        └─ GrobidService.processGrobidDocument() → PaperDocument
        └─ Language detection (Tika, synchronized)

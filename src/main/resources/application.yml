@@ -83,7 +83,14 @@ arxiv:
 oai:
   processing:
     days-back: 90
-    sources: ARXIV
+    sources: ZENODO
+    concurrency: 10
+    queue: 20
+    http-client:
+      connect-timeout-seconds: 15
+      response-timeout-seconds: 180
+      idle-eviction-seconds: 30
+      validate-after-inactivity-seconds: 2
   zenodo:
     base-url: https://zenodo.org/oai2d
     metadata-prefix: oai_datacite
@@ -103,9 +110,10 @@ oai:
 grobid:
   base-url: http://localhost:8070
   fulltext-endpoint: /api/processFulltextDocument
-  client:
-    concurrency: 8
-    queue: 16
+  http-client:
+    connect-timeout-seconds: 5
+    response-timeout-seconds: 300
+    idle-eviction-seconds: 30
   options:
     consolidate-header: true
     consolidate-citations: true
@@ -183,10 +191,10 @@ resilience4j:
           - com.data.oai.RetryableApiException
       grobid:
         maxAttempts: 3
-        waitDuration: 5s
+        waitDuration: 10s
         enableExponentialBackoff: true
         exponentialBackoffMultiplier: 2.0
-        exponentialMaxWaitDuration: 10s
+        exponentialMaxWaitDuration: 60s
         retryExceptions:
           - org.springframework.web.client.ResourceAccessException
-          - org.springframework.web.client.HttpServerErrorException
+          - com.data.shared.exception.GrobidServiceUnavailableException

@@ -186,7 +186,7 @@ All `@Configuration` classes and `@ConfigurationProperties` for the application.
 
 ```
 config/
-├── AsyncConfig, GrobidExecutorConfig, GrobidRestClientConfig
+├── AsyncConfig, OaiExecutorConfig, GrobidRestClientConfig
 ├── OpenApiConfig, RagSystemConfig, TikaLangDetectConfig
 ├── YouTubeConfig, SemaphoreAsyncTaskExecutor
 └── properties/                  # @ConfigurationProperties beans

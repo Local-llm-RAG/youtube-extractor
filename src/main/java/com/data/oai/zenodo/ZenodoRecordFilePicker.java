@@ -10,7 +10,7 @@ public final class ZenodoRecordFilePicker {
     // URL-encoding but break their backend routing (quotes, angle brackets, etc.).
     // Allow only printable ASCII minus the known-bad set.
     private static final Pattern UNSAFE_KEY = Pattern.compile("[\"<>{}|\\\\^`\\[\\]]");
-    private static final long MIN_PDF_SIZE_BYTES = 40_000;
+    private static final long MIN_PDF_SIZE_BYTES = 10_000;
     private static final Set<String> REJECTED_SUBTYPES = Set.of(
             "taxonomictreatment", "poster", "presentation", "slides"
     );

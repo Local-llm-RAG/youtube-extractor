@@ -65,10 +65,14 @@ services:
   grobid:
     image: grobid/grobid:0.8.2.1-full
     restart: unless-stopped
+    deploy:
+      replicas: 1
     expose:
       - "8070"
       - "8071"
     networks: [grobid_net]
+    volumes:
+      - ./grobid.yaml:/opt/grobid/grobid-home/config/grobid.yaml
     tmpfs:
       - /tmp:size=4g
     shm_size: "1g"

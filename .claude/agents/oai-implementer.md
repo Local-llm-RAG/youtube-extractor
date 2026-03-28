@@ -53,7 +53,7 @@ AbstractMap.SimpleEntry<String, byte[]> fetchPdfAndEnrich(Record record);
 3. **License filtering:** Apply early. Reject -NC and -ND. Accept CC0, CC-BY, CC-BY-SA, MIT, Apache-2.0, BSD.
 4. **HTTP client reuse:** Use the shared `grobidRestClient` bean. No new `RestClient` instances.
 5. **Thin handlers:** Handlers delegate to services/clients. Keep handler classes under 50 lines.
-6. **Thread safety:** Use provided `grobidExecutor` in `GenericFacade`. Never create new thread pools.
+6. **Thread safety:** Use provided `oaiExecutor` in `GenericFacade`. Never create new thread pools.
 7. **Graceful degradation:** If a PDF is unavailable, return null — don't throw. Log at INFO level.
 
 ## New Source Checklist

@@ -21,7 +21,7 @@ public class OAIProcessorService implements Job {
     private final OaiProcessingProperties processingProps;
 
     @Override
-    public void execute(@NotNull JobExecution execution) {
+    public void execute(JobExecution execution) {
         processingProps.sources()
                 .forEach(dataSource -> {
                     log.info("Starting OAI processing for {} ({} days back)", dataSource, processingProps.daysBack());

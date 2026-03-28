@@ -1,5 +1,9 @@
 package com.data.config;
 
+import com.data.config.properties.GrobidProperties;
+import com.data.config.properties.HttpClientProperties;
+import com.data.config.properties.OaiProcessingProperties;
+import com.data.config.properties.ZenodoOaiProps;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -13,78 +17,52 @@ import org.springframework.web.client.RestClient;
 
 @Configuration
 public class GrobidRestClientConfig {
+
+    private static final int POOL_HEADROOM = 2;
+
     @Bean(name = "grobidRestClient")
-    public RestClient grobidRestClient(RestClient.Builder builder) {
-        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(50);
-        cm.setDefaultMaxPerRoute(50);
-
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofSeconds(5))
-                .setResponseTimeout(Timeout.ofMinutes(5))
-                .build();
-
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(cm)
-                .setDefaultRequestConfig(requestConfig)
-                .evictIdleConnections(TimeValue.ofSeconds(30))
-                .build();
-
-        HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
-
-        return builder
-                .requestFactory(rf)
-                .build();
+    public RestClient grobidRestClient(RestClient.Builder builder, GrobidProperties grobidProps,
+                                       OaiProcessingProperties oaiProps) {
+        return buildRestClient(builder, oaiProps.concurrency(), grobidProps.httpClient(), true);
     }
 
     @Bean(name = "oaiRestClient")
-    public RestClient oaiRestClient(RestClient.Builder builder) {
-        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(30);
-        cm.setDefaultMaxPerRoute(10);
-        // Validate idle connections before reuse — NCBI closes idle connections
-        // aggressively, causing NoHttpResponseException on stale sockets
-        cm.setValidateAfterInactivity(TimeValue.ofSeconds(2));
-
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofSeconds(10))
-                .setResponseTimeout(Timeout.ofMinutes(3))
-                .build();
-
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(cm)
-                .setDefaultRequestConfig(requestConfig)
-                .evictIdleConnections(TimeValue.ofSeconds(10))
-                .build();
-
-        HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
-
-        return builder
-                .requestFactory(rf)
-                .build();
+    public RestClient oaiRestClient(RestClient.Builder builder, OaiProcessingProperties oaiProps) {
+        return buildRestClient(builder, oaiProps.concurrency() + POOL_HEADROOM, oaiProps.httpClient(), false);
     }
 
     @Bean(name = "zenodoRestClient")
-    public RestClient zenodoRestClient(RestClient.Builder builder) {
+    public RestClient zenodoRestClient(RestClient.Builder builder, OaiProcessingProperties oaiProps) {
+        return buildRestClient(builder, oaiProps.concurrency() + POOL_HEADROOM, oaiProps.httpClient(), false);
+    }
+
+    private RestClient buildRestClient(RestClient.Builder builder, int maxConnections,
+                                       HttpClientProperties http, boolean disableRetries) {
         PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(20);
-        cm.setDefaultMaxPerRoute(10);
+        cm.setMaxTotal(maxConnections);
+        cm.setDefaultMaxPerRoute(maxConnections);
+        if (http.validateAfterInactivitySeconds() != null) {
+            cm.setValidateAfterInactivity(TimeValue.ofSeconds(http.validateAfterInactivitySeconds()));
+        }
 
         RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofSeconds(15))
-                .setResponseTimeout(Timeout.ofMinutes(3))
+                .setConnectTimeout(Timeout.ofSeconds(http.connectTimeoutSeconds()))
+                .setResponseTimeout(Timeout.ofSeconds(http.responseTimeoutSeconds()))
                 .build();
 
-        CloseableHttpClient httpClient = HttpClients.custom()
+        var httpClientBuilder = HttpClients.custom()
                 .setConnectionManager(cm)
                 .setDefaultRequestConfig(requestConfig)
-                .evictIdleConnections(TimeValue.ofSeconds(30))
-                .build();
+                .evictIdleConnections(TimeValue.ofSeconds(http.idleEvictionSeconds()));
 
-        HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
+        if (disableRetries) {
+            httpClientBuilder.disableAutomaticRetries();
+        }
+
+        CloseableHttpClient httpClient = httpClientBuilder.build();
 
         return builder
-                .requestFactory(rf)
+                .requestFactory(new HttpComponentsClientHttpRequestFactory(httpClient))
                 .build();
     }
 }

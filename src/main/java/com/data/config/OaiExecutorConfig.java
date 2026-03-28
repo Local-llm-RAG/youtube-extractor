@@ -1,6 +1,6 @@
 package com.data.config;
 
-import com.data.config.properties.GrobidProperties;
+import com.data.config.properties.OaiProcessingProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,16 +10,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
-public class GrobidExecutorConfig {
+public class OaiExecutorConfig {
 
-    @Bean(name = "grobidExecutor", destroyMethod = "shutdown")
-    public ExecutorService grobidExecutor(GrobidProperties props) {
+    @Bean(name = "oaiExecutor", destroyMethod = "shutdown")
+    public ExecutorService oaiExecutor(OaiProcessingProperties props) {
         return new ThreadPoolExecutor(
-                props.client().concurrency(),
-                props.client().concurrency(),
+                props.concurrency(),
+                props.concurrency(),
                 0L,
                 TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(props.client().queue()),
+                new LinkedBlockingQueue<>(props.queue()),
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );
     }

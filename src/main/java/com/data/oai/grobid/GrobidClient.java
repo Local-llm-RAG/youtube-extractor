@@ -1,11 +1,13 @@
 package com.data.oai.grobid;
 
 import com.data.config.properties.GrobidProperties;
+import com.data.shared.exception.GrobidServiceUnavailableException;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -27,12 +29,21 @@ public class GrobidClient {
     public String processPdfToXmlString(String sourceId, byte[] pdfBytes) {
         MultipartBodyBuilder mb = buildGrobidRequest(pdfBytes, sourceId + ".pdf");
 
-        return rest.post()
-                .uri(props.baseUrl() + props.fulltextEndpoint())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(mb.build())
-                .retrieve()
-                .body(String.class);
+        try {
+            return rest.post()
+                    .uri(props.baseUrl() + props.fulltextEndpoint())
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(mb.build())
+                    .retrieve()
+                    .body(String.class);
+        } catch (HttpServerErrorException ex) {
+            int status = ex.getStatusCode().value();
+            if (status == 503 || status == 504) {
+                throw new GrobidServiceUnavailableException(
+                        "GROBID service unavailable (" + status + ") for sourceId=" + sourceId, ex);
+            }
+            throw ex;
+        }
     }
 
     private MultipartBodyBuilder buildGrobidRequest(byte[] pdfBytes, String filename) {
