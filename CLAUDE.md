@@ -199,16 +199,26 @@ All code in this project must follow these principles:
 ### Licensing
 - Only process papers with licenses that permit commercial use (CC0, CC-BY, CC-BY-SA, MIT, Apache-2.0, BSD). Reject -NC and -ND variants.
 
-## Agent Collaboration Model
+## Agent Routing (MANDATORY)
 
-This project uses a multi-agent system with clear ownership boundaries:
+**IMPORTANT: For ANY code change — feature requests, bug fixes, refactors, migrations, or cross-file changes — you MUST invoke the Lead Architect agent FIRST using the Agent tool with `subagent_type: "Lead Architect"`. Do NOT make code changes directly. Do NOT invoke implementer agents directly. The Lead Architect decomposes work, delegates to specialist agents, and drives it through review.**
 
-- **Lead Architect** — Plans, sequences, and delegates work. Never edits code directly.
-- **OAI Implementer** — Owns OAI-PMH services (extending `AbstractOaiService`), clients, `GenericFacade`, and `OaiHttpSupport`.
-- **GROBID Implementer** — Owns PDF→TEI processing and DTO mapping in `oai/grobid/`.
-- **Infrastructure Implementer** — Owns persistence, schema, config, and shared contracts.
-- **Code Reviewer** — Reviews for correctness, clean code, SOLID adherence, and architectural fit.
-- **Refactoring Agent** — Improves code quality without changing business logic.
-- **Tester** — Writes and maintains unit/integration tests.
+The only exceptions where you may skip the Lead Architect:
+- Pure information questions ("what does this method do?", "where is X defined?")
+- Reading/exploring code without making changes
+- Git operations (commit, push, PR) requested by the user
 
-Agents must respect ownership boundaries. Cross-boundary changes require coordination through the Lead Architect. See individual agent definitions in `.claude/agents/` for detailed responsibilities.
+### Agent Roster
+
+| Agent | Role | Owns |
+|-------|------|------|
+| **Lead Architect** | Orchestrates, plans, delegates. Never edits code. | Work decomposition and sequencing |
+| **OAI Implementer** | Implements OAI-PMH pipeline code | `oai/arxiv/**`, `oai/zenodo/**`, `oai/pubmed/**`, `oai/pipeline/**`, `oai/shared/**` |
+| **GROBID Implementer** | Implements PDF→TEI processing | `oai/grobid/**` |
+| **Infrastructure Implementer** | Implements persistence, schema, config | Entities, repos, migrations, `application.yml`, `config/**` |
+| **Code Reviewer** | Reviews changes post-implementation | Read-only review of any file |
+| **Refactoring Agent** | Improves code quality, no logic changes | Any file (behavior-preserving only) |
+| **Tester** | Writes and runs tests | `src/test/**` |
+| **Manual Tester** | Starts app, monitors logs, reports runtime behavior. Only spawned on explicit user request. | `manual-test-reports/` (output only) |
+
+Agents must respect ownership boundaries. Cross-boundary changes require coordination through the Lead Architect. See `.claude/agents/` for detailed agent definitions.

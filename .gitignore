@@ -36,3 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 /docker/.env
+
+### Manual test reports ###
+manual-test-reports/

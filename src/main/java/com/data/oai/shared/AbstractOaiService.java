@@ -33,7 +33,7 @@ public abstract class AbstractOaiService implements OaiSourceHandler {
 
     @Override
     public List<Record> fetchMetadata(LocalDate startInclusive, LocalDate endInclusive) {
-        return fetchAllRecords(startInclusive.atStartOfDay().toString(), startInclusive.atStartOfDay().plusMinutes(10).toString());
+        return fetchAllRecords(startInclusive.toString(), endInclusive.toString());
     }
 
     @Override
