@@ -5,11 +5,13 @@ import com.data.oai.persistence.repository.TrackerRepository;
 import com.data.oai.pipeline.DataSource;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TrackerService {
@@ -22,6 +24,8 @@ public class TrackerService {
             // Skip only when fully processed (all > 0 and all == processed)
             if (tracker.getAllPapersForPeriod() > 0
                     && tracker.getAllPapersForPeriod().equals(tracker.getProcessedPapersForPeriod())) {
+                log.debug("[{}] Skipping fully processed date {} ({}/{} records)",
+                        dataSource, startDate, tracker.getProcessedPapersForPeriod(), tracker.getAllPapersForPeriod());
                 return null;
             }
             return tracker;

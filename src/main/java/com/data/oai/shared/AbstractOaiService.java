@@ -33,7 +33,7 @@ public abstract class AbstractOaiService implements OaiSourceHandler {
 
     @Override
     public List<Record> fetchMetadata(LocalDate startInclusive, LocalDate endInclusive) {
-        return fetchAllRecords(startInclusive.toString(), endInclusive.toString());
+        return fetchAllRecords(startInclusive.atStartOfDay().toString(), startInclusive.atStartOfDay().plusMinutes(10).toString());
     }
 
     @Override
@@ -61,6 +61,9 @@ public abstract class AbstractOaiService implements OaiSourceHandler {
 
             OaiPage page = parseResponse(body);
             collected.addAll(page.records());
+
+            log.info("Collected papers: {} for time - from: {} until: {}", collected.size(), from, until);
+
             token = page.resumptionToken();
 
             if (token != null && !token.isBlank()) {

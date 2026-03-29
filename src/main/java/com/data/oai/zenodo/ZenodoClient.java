@@ -18,7 +18,7 @@ public class ZenodoClient {
     private final RestClient rest;
     private final ZenodoOaiProps props;
 
-    public ZenodoClient(@Qualifier("zenodoRestClient") RestClient rest, ZenodoOaiProps props) {
+    public ZenodoClient(@Qualifier("oaiRestClient") RestClient rest, ZenodoOaiProps props) {
         this.rest = rest;
         this.props = props;
     }
