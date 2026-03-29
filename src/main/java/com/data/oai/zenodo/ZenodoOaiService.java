@@ -223,7 +223,7 @@ public class ZenodoOaiService extends AbstractOaiService {
                                     cur.setLicense(LicenseFilter.normalizeLicense(cur.getLicense()));
                                 }
 
-                                if (LicenseFilter.isPermissiveLicense(cur.getLicense(), true, true)
+                                if (LicenseFilter.isPermissiveLicense(cur.getLicense(), true, false)
                                         && isLikelyScholarlyText(cur)) {
                                     records.add(cur);
                                 }
@@ -250,6 +250,6 @@ public class ZenodoOaiService extends AbstractOaiService {
     }
 
     private boolean isLikelyScholarlyText(Record r) {
-        return !r.getAuthors().isEmpty() && !r.getCategories().isEmpty();
+        return !r.getAuthors().isEmpty();
     }
 }
