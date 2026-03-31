@@ -19,7 +19,8 @@ import lombok.*;
 public class YouTubeRegionLanguage {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "youtube_region_languages_seq")
+    @SequenceGenerator(name = "youtube_region_languages_seq", sequenceName = "youtube_region_languages_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -18,7 +18,8 @@ import java.util.List;
 public class VideoTranscript {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "video_transcripts_seq")
+    @SequenceGenerator(name = "video_transcripts_seq", sequenceName = "video_transcripts_id_seq", allocationSize = 50)
     private Long id;
 
     // Many transcripts can belong to one video

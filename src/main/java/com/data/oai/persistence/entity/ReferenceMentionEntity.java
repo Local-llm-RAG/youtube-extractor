@@ -22,7 +22,8 @@ import java.util.List;
 public class ReferenceMentionEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reference_mention_seq")
+    @SequenceGenerator(name = "reference_mention_seq", sequenceName = "reference_mention_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

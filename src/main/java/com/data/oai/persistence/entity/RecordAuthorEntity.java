@@ -15,7 +15,8 @@ import lombok.*;
 public class RecordAuthorEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "record_author_seq")
+    @SequenceGenerator(name = "record_author_seq", sequenceName = "record_author_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)

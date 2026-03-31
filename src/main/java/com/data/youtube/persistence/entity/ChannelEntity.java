@@ -11,7 +11,8 @@ import lombok.*;
 public class ChannelEntity {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "channels_seq")
+  @SequenceGenerator(name = "channels_seq", sequenceName = "channels_id_seq", allocationSize = 50)
   private Long id;
 
   @Column(name = "youtube_channel_id", nullable = false, unique = true, length = 64)

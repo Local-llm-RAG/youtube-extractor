@@ -20,7 +20,8 @@ import java.util.List;
 public class SectionEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "document_section_seq")
+    @SequenceGenerator(name = "document_section_seq", sequenceName = "document_section_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
@@ -46,7 +47,8 @@ public class SectionEntity {
     @OneToMany(
             mappedBy = "section",
             cascade = CascadeType.ALL,
-            orphanRemoval = true
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
     )
     @OrderBy("chunkIndex ASC")
     private List<EmbedTranscriptChunkEntity> embeddings = new ArrayList<>();

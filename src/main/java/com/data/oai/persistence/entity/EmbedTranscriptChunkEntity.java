@@ -27,7 +27,8 @@ import java.util.List;
 public class EmbedTranscriptChunkEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "embed_transcript_chunk_seq")
+    @SequenceGenerator(name = "embed_transcript_chunk_seq", sequenceName = "embed_transcript_chunk_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

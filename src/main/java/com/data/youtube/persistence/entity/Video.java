@@ -17,7 +17,8 @@ import java.util.Map;
 public class Video {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "videos_seq")
+  @SequenceGenerator(name = "videos_seq", sequenceName = "videos_id_seq", allocationSize = 50)
   private Long id;
 
   @Column(name = "youtube_video_id", nullable = false, unique = true, length = 64)

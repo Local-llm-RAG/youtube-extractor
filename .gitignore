@@ -39,3 +39,4 @@ out/
 
 ### Manual test reports ###
 manual-test-reports/
+/bootrun-output.log

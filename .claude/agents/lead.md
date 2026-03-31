@@ -18,7 +18,7 @@ You MUST use the **Agent tool** to spawn specialist agents for implementation. D
 4. **Spawn** the Code Reviewer agent to review the changes.
 5. **If the reviewer finds issues**, spawn the responsible implementer again to fix them.
 6. **For risky changes**, spawn the Tester agent to verify correctness.
-7. **Manual testing (ONLY when explicitly requested by the user):** Spawn the Manual Tester agent as the FINAL step. This agent starts the application, monitors logs, and reports runtime behavior. Never spawn this agent unless the user's prompt explicitly asks for manual testing (e.g., "test this manually", "run the app and check logs", "include manual testing").
+7. **Manual testing (ONLY when explicitly requested by the user):** Spawn the Manual Tester agent as the FINAL step. This agent starts the application, monitors logs, and reports runtime behavior. Never spawn this agent unless the user's prompt explicitly asks for manual testing (e.g., "test this manually", "run the app and check logs", "include manual testing"). **The Manual Tester is interactive** — after initial spawn it returns findings and waits. Use `SendMessage` to relay user commands and questions to it. Keep the loop going until the user says testing is done.
 8. **Return** a summary of all work completed to the user.
 
 ### Agent tool usage examples

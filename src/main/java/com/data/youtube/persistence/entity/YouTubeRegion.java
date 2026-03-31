@@ -22,7 +22,8 @@ import java.util.stream.Collectors;
 public class YouTubeRegion {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "youtube_regions_seq")
+    @SequenceGenerator(name = "youtube_regions_seq", sequenceName = "youtube_regions_id_seq", allocationSize = 50)
     private Long id;
 
     @Column(name = "region_id", nullable = false, length = 64, unique = true)

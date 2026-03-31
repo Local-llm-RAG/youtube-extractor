@@ -24,7 +24,8 @@ import java.util.List;
 public class PaperDocumentEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "record_document_seq")
+    @SequenceGenerator(name = "record_document_seq", sequenceName = "record_document_id_seq", allocationSize = 50)
     private Long id;
 
     @OneToOne(optional = false, fetch = FetchType.LAZY)
@@ -65,7 +66,8 @@ public class PaperDocumentEntity {
     @OneToMany(
             mappedBy = "document",
             cascade = CascadeType.ALL,
-            orphanRemoval = true
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
     )
     @OrderBy("refIndex ASC")
     private List<ReferenceMentionEntity> references = new ArrayList<>();
@@ -73,7 +75,8 @@ public class PaperDocumentEntity {
     @OneToMany(
         mappedBy = "document",
         cascade = CascadeType.ALL,
-        orphanRemoval = true
+        orphanRemoval = true,
+        fetch = FetchType.LAZY
     )
     @OrderColumn(name = "pos")
     private List<SectionEntity> sections = new ArrayList<>();

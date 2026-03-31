@@ -25,7 +25,8 @@ import java.util.List;
 public class RecordEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "source_record_seq")
+    @SequenceGenerator(name = "source_record_seq", sequenceName = "source_record_id_seq", allocationSize = 50)
     private Long id;
 
     @Column(name = "source_identifier", nullable = false, length = 64)

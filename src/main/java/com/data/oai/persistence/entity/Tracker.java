@@ -20,7 +20,8 @@ import java.time.LocalDate;
 public class Tracker {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "tracker_seq")
+    @SequenceGenerator(name = "tracker_seq", sequenceName = "tracker_id_seq", allocationSize = 50)
     private Long id;
 
     @Column(name = "date_start", nullable = false)
