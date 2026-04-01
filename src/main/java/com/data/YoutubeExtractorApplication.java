@@ -1,6 +1,7 @@
 package com.data;
 
 import com.data.config.properties.*;
+import com.data.shared.exception.logging.ExceptionFileLoggerProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -10,7 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         ModelProperties.class, RagSystemClientProperties.class, EmbeddingProperties.class,
         ArxivOaiProps.class, GrobidProperties.class, ZenodoOaiProps.class, PubmedOaiProps.class,
         GptProperties.class, ArxivSearchProperties.class, OaiProcessingProperties.class,
-        QdrantGrpcConfig.class
+        QdrantGrpcConfig.class, ExceptionFileLoggerProperties.class
 })
 public class YoutubeExtractorApplication {
 

@@ -37,6 +37,12 @@ out/
 .vscode/
 /docker/.env
 
+### Logs ###
+logs/
+
 ### Manual test reports ###
 manual-test-reports/
+
+### OAI quality audit reports ###
+oai-quality-reports/
 /bootrun-output.log

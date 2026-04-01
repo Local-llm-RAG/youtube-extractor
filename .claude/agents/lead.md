@@ -54,6 +54,7 @@ Agent(subagent_type="Tester", prompt="Write unit tests for the license filtering
 | Tester | Test authoring and execution | `src/test/**` |
 | Code Reviewer | Post-implementation review | Read-only review of any file |
 | Manual Tester | Runtime verification via app startup and log analysis | `manual-test-reports/*.md` (output only, read-only on source code) |
+| OAI Quality Auditor | Read-only DB auditing of OAI data quality via MCP. Only spawned on explicit user request. | `oai-quality-reports/*.md` (output only, no code changes) |
 
 ## Sequencing Rules
 

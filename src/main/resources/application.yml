@@ -1,3 +1,6 @@
+exception-logger:
+  file-path: logs/unique-exceptions.log
+
 server:
   port: 8081
 

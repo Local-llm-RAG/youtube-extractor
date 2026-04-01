@@ -220,5 +220,6 @@ The only exceptions where you may skip the Lead Architect:
 | **Refactoring Agent** | Improves code quality, no logic changes | Any file (behavior-preserving only) |
 | **Tester** | Writes and runs tests | `src/test/**` |
 | **Manual Tester** | Starts app, monitors logs, reports runtime behavior. Only spawned on explicit user request. | `manual-test-reports/` (output only) |
+| **OAI Quality Auditor** | Autonomously audits OAI data quality via read-only DB queries (MCP). Only spawned on explicit user request. | `oai-quality-reports/` (output only) |
 
 Agents must respect ownership boundaries. Cross-boundary changes require coordination through the Lead Architect. See `.claude/agents/` for detailed agent definitions.
