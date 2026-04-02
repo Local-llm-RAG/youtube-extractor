@@ -2,14 +2,14 @@ package com.data.oai.generic;
 
 import com.data.config.properties.EmbeddingProperties;
 import com.data.embedding.RagSystemRestApiService;
-import com.data.embedding.dto.EmbeddingDto;
 import com.data.external.rest.pythonclient.dto.EmbedTranscriptRequest;
 import com.data.external.rest.pythonclient.dto.EmbeddingTask;
 import com.data.oai.DataSource;
 import com.data.oai.PaperInternalService;
 import com.data.oai.generic.common.tracker.Tracker;
-import com.data.oai.generic.common.dto.Record;
 import com.data.oai.generic.common.dto.PaperDocument;
+import com.data.oai.generic.common.dto.Record;
+import com.data.oai.generic.common.dto.Section;
 import com.data.grobid.GrobidService;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +18,14 @@ import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -42,6 +44,8 @@ public class GenericFacade {
 
     @Resource(name = "grobidExecutor")
     private ExecutorService grobidPool;
+
+    private final AtomicLong totalBytesStored = new AtomicLong();
 
     public Tracker getTracker(LocalDate startDate, DataSource dataSource) {
         return paperInternalService.getTracker(startDate, dataSource);
@@ -111,6 +115,7 @@ public class GenericFacade {
                     apiRecord,
                     grobidDoc,
                     urlWithContent.getKey());
+            totalBytesStored.addAndGet(estimateDocumentBytes(grobidDoc));
         } catch (Exception e) {
             log.warn("Failed to process arXivId={} with GROBID", sourceId, e);
         } finally {
@@ -120,8 +125,27 @@ public class GenericFacade {
 
             if (newVal % 10 == 0) {
                 paperInternalService.persistTracker(tracker);
+                log.info("Cumulative DB content stored: {} ({} documents)", humanReadableSize(totalBytesStored.get()), newVal);
             }
         }
+    }
+
+    private static long estimateDocumentBytes(PaperDocument doc) {
+        long size = 0;
+        if (doc.teiXml() != null)       size += doc.teiXml().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.rawContent() != null)    size += doc.rawContent().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.title() != null)         size += doc.title().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.abstractText() != null)  size += doc.abstractText().getBytes(StandardCharsets.UTF_8).length;
+        for (Section s : doc.sections())
+            if (s.getText() != null)     size += s.getText().getBytes(StandardCharsets.UTF_8).length;
+        return size;
+    }
+
+    private static String humanReadableSize(long bytes) {
+        if (bytes < 1024)                    return bytes + " B";
+        if (bytes < 1024 * 1024)             return "%.1f KB".formatted(bytes / 1024.0);
+        if (bytes < 1024L * 1024 * 1024)     return "%.1f MB".formatted(bytes / (1024.0 * 1024));
+        return "%.2f GB".formatted(bytes / (1024.0 * 1024 * 1024));
     }
 
     private String detectLang(String text, String sourceId) {
