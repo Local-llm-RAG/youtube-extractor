@@ -6,6 +6,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.time.Year;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -18,6 +19,9 @@ import static com.data.oai.grobid.tei.GrobidTeiUtils.*;
 final class GrobidReferenceExtractor {
 
     private GrobidReferenceExtractor() {}
+
+    private static final int MIN_VALID_YEAR = 1900;
+    private static final int MAX_VALID_YEAR = Year.now().getValue();
 
     private static final Pattern DOI =
             Pattern.compile("(?i)\\b10\\.\\d{4,9}/[-._;()/:A-Z0-9]+\\b");
@@ -144,13 +148,30 @@ final class GrobidReferenceExtractor {
         Element date = bibl.selectFirst("imprint date[when], imprint date, date[when], date");
         if (date != null) {
             String raw = normalizeWs(date.hasAttr("when") ? date.attr("when") : date.text());
-            if (raw != null && raw.length() >= 4) return raw.substring(0, 4);
+            if (raw != null && raw.length() >= 4) {
+                String candidate = raw.substring(0, 4);
+                if (isValidYear(candidate)) return candidate;
+            }
         }
         // fallback: parse year from raw reference if present
         Element raw = bibl.selectFirst("note[type=raw_reference], note[type=rawRef], note[type=raw]");
         String rawText = raw != null ? raw.text() : bibl.text();
         String y = firstRegex(Pattern.compile("\\b(19\\d{2}|20\\d{2})\\b"), rawText);
+        if (y != null && !isValidYear(y)) return null;
         return y;
+    }
+
+    /**
+     * Validates that a year candidate is a 4-digit number between 1900 and the current year.
+     */
+    private static boolean isValidYear(String candidate) {
+        if (candidate == null || candidate.length() != 4) return false;
+        try {
+            int year = Integer.parseInt(candidate);
+            return year >= MIN_VALID_YEAR && year <= MAX_VALID_YEAR;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private static Map<String, String> extractIdnos(Element bibl) {

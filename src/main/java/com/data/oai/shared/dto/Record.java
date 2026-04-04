@@ -17,6 +17,8 @@ public class Record {
     private final List<Author> authors = new ArrayList<>();
     private String sourceId;
     private String language;
+    private String title;
+    private String abstractText;
 
     public Author lastAuthor() {
         return authors.getLast();

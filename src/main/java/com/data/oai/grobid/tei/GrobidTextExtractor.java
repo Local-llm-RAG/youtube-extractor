@@ -125,19 +125,31 @@ final class GrobidTextExtractor {
 
             if ("figure".equals(tag)) {
                 Element figDesc = el.selectFirst("figDesc");
-                String t = normalizeWs(figDesc != null ? figDesc.text() : "");
+                String t = cleanText(figDesc != null ? figDesc.text() : "");
                 appendBlock(out, t);
                 return;
             }
 
             if (BLOCK_TAGS.contains(tag)) {
-                String t = normalizeWs(el.text());
-                if (!t.isBlank()) appendBlock(out, t);
+                String t = cleanText(el.text());
+                if (t != null && !t.isBlank()) appendBlock(out, t);
             }
         });
 
-        if (out.isEmpty()) {
-            out.append(normalizeWs(root.text()));
+        if (out.isEmpty() || out.toString().isBlank()) {
+            out.setLength(0);
+            // Fallback chain: root.text() → body element → entire document
+            String fallback = cleanText(root.text());
+            if (fallback == null || fallback.isBlank()) {
+                Element body = tei.selectFirst("text > body");
+                if (body != null) fallback = cleanText(body.text());
+            }
+            if (fallback == null || fallback.isBlank()) {
+                fallback = cleanText(tei.text());
+            }
+            if (fallback != null && !fallback.isBlank()) {
+                out.append(fallback);
+            }
         }
 
         return out.toString().trim();

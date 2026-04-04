@@ -226,6 +226,7 @@ public class PubmedOaiService extends AbstractOaiService {
                         case "datestamp" -> { if (inHeader) tag = "datestamp"; }
                         case "creator" -> { if (inMetadata) tag = "creator"; }
                         case "subject" -> { if (inMetadata) tag = "subject"; }
+                        case "title" -> { if (inMetadata) tag = "title"; }
                         case "description" -> { if (inMetadata) tag = "description"; }
                         case "rights" -> { if (inMetadata) tag = "rights"; }
                         case "source" -> { if (inMetadata) tag = "source"; }
@@ -244,6 +245,7 @@ public class PubmedOaiService extends AbstractOaiService {
                         case "token" -> resumptionToken = text;
                         case "headerIdentifier" -> cur.setOaiIdentifier(text);
                         case "datestamp" -> cur.setDatestamp(text);
+                        case "title" -> cur.setTitle(text);
                         case "creator" -> cur.getAuthors().add(AuthorNameParser.parse(text));
                         case "subject" -> cur.getCategories().add(text);
                         case "description" -> {
@@ -274,6 +276,7 @@ public class PubmedOaiService extends AbstractOaiService {
                         case "record" -> {
                             if (cur != null) {
                                 if (descriptionBuilder != null && !descriptionBuilder.toString().isBlank()) {
+                                    cur.setAbstractText(descriptionBuilder.toString());
                                     cur.setComments(descriptionBuilder.toString());
                                 }
                                 if (cur.getLicense() != null) {

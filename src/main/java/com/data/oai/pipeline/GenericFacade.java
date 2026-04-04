@@ -2,7 +2,6 @@ package com.data.oai.pipeline;
 
 import com.data.config.properties.EmbeddingProperties;
 import com.data.rag.client.RagSystemRestApiService;
-import com.data.rag.dto.EmbedTranscriptRequest;
 import com.data.oai.persistence.PaperInternalService;
 import com.data.oai.persistence.TrackerService;
 import com.data.shared.exception.PdfDownloadException;
@@ -42,7 +41,7 @@ public class GenericFacade {
     private final EmbeddingProperties embeddingProperties;
     private final LanguageDetector languageDetector;
 
-    @Resource(name = "grobidExecutor")
+    @Resource(name = "oaiExecutor")
     private ExecutorService grobidPool;
 
     public Tracker getTracker(LocalDate startDate, DataSource dataSource) {
@@ -107,11 +106,13 @@ public class GenericFacade {
             }
 
             PaperDocument grobidDoc = grobidService.processGrobidDocument(sourceId, apiRecord.getOaiIdentifier(), pdfBytes);
+            grobidDoc = grobidDoc.withFallbacks(apiRecord.getTitle(), apiRecord.getAbstractText());
             apiRecord.setLanguage(detectLang(grobidDoc.title() + " " + grobidDoc.abstractText(), sourceId));
-            grobidDoc.sections().forEach(
-                    section ->
-                            section.setEmbeddings(ragService.getEmbeddingsForText(EmbedTranscriptRequest.forPassage(section.getText(), embeddingProperties)))
-            );
+//            grobidDoc.sections().forEach(
+//                    section ->
+//                            section.setEmbeddings(ragService.getEmbeddingsForText(EmbedTranscriptRequest.forPassage(section.getText(), embeddingProperties)))
+//            );
+
             paperInternalService.persistState(
                     tracker.getDataSource(),
                     apiRecord,

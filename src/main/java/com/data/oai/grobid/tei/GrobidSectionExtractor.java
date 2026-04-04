@@ -7,8 +7,8 @@ import org.jsoup.nodes.Element;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.data.oai.grobid.tei.GrobidTeiUtils.isInsideTable;
-import static com.data.oai.grobid.tei.GrobidTeiUtils.normalizeWs;
+import static com.data.oai.grobid.tei.GrobidTeiUtils.*;
+
 
 /**
  * Extracts sections from TEI-XML documents parsed by GROBID.
@@ -120,8 +120,8 @@ final class GrobidSectionExtractor {
 
         return switch (tag) {
             case "p", "note", "formula", "list", "item", "head", "ab", "quote", "cit", "label" ->
-                    normalizeWs(el.text());
-            case "figure" -> normalizeWs(Optional.ofNullable(el.selectFirst("figDesc")).map(Element::text).orElse(""));
+                    cleanText(el.text());
+            case "figure" -> cleanText(Optional.ofNullable(el.selectFirst("figDesc")).map(Element::text).orElse(""));
             default -> "";
         };
     }

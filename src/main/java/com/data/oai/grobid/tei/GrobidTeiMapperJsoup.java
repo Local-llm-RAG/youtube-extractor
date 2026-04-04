@@ -37,10 +37,10 @@ public final class GrobidTeiMapperJsoup {
 
         Document tei = Jsoup.parse(teiXml, "", Parser.xmlParser());
 
-        String title = firstText(tei, "teiHeader titleStmt > title");
-        if (GrobidTeiUtils.isBlank(title)) title = firstText(tei, "teiHeader sourceDesc biblStruct analytic title");
+        String title = GrobidTeiUtils.cleanText(firstText(tei, "teiHeader titleStmt > title"));
+        if (GrobidTeiUtils.isBlank(title)) title = GrobidTeiUtils.cleanText(firstText(tei, "teiHeader sourceDesc biblStruct analytic title"));
 
-        String abstractText = normalizeWs(firstText(tei, "teiHeader profileDesc abstract"));
+        String abstractText = GrobidTeiUtils.cleanText(firstText(tei, "teiHeader profileDesc abstract"));
         List<String> keywords = GrobidTextExtractor.extractKeywords(tei);
 
         List<String> affiliation = GrobidTextExtractor.extractAffiliations(tei);

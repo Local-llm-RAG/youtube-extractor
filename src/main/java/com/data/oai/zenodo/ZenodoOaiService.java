@@ -166,6 +166,7 @@ public class ZenodoOaiService extends AbstractOaiService {
                                 cur.setDoi(DoiNormalizer.normalize(text));
                             }
                         }
+                        case "title" -> cur.setTitle(text);
                         case "description" -> {
                             if (abstractDescription == null) {
                                 abstractDescription = new StringBuilder(text);
@@ -214,9 +215,11 @@ public class ZenodoOaiService extends AbstractOaiService {
                         case "resumptionToken" -> { if ("token".equals(tag)) tag = null; }
                         case "record" -> {
                             if (cur != null) {
-                                if (cur.getComments() == null && abstractDescription != null
-                                        && !abstractDescription.toString().isBlank()) {
-                                    cur.setComments(abstractDescription.toString());
+                                if (abstractDescription != null && !abstractDescription.toString().isBlank()) {
+                                    cur.setAbstractText(abstractDescription.toString());
+                                    if (cur.getComments() == null) {
+                                        cur.setComments(abstractDescription.toString());
+                                    }
                                 }
 
                                 if (cur.getLicense() != null) {

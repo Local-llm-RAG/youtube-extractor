@@ -123,6 +123,8 @@ public class ArxivOaiService extends AbstractOaiService {
                         case "journal-ref" -> cur.setJournalRef(text);
                         case "doi" -> cur.setDoi(text);
                         case "license" -> cur.setLicense(text);
+                        case "title" -> cur.setTitle(text);
+                        case "abstract" -> cur.setAbstractText(text);
                         case "keyname" -> {
                             if (!cur.getAuthors().isEmpty()) cur.lastAuthor().lastName = text;
                         }

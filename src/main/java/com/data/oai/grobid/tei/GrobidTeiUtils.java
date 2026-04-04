@@ -14,6 +14,9 @@ final class GrobidTeiUtils {
 
     private GrobidTeiUtils() {}
 
+    private static final Pattern RESIDUAL_TAGS = Pattern.compile("<[^>]+>");
+    private static final char UNICODE_REPLACEMENT = '\uFFFD';
+
     static String normalizeWs(String s) {
         if (s == null) return null;
         return s.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
@@ -55,5 +58,16 @@ final class GrobidTeiUtils {
 
     static String firstOrEmpty(List<String> xs) {
         return (xs == null || xs.isEmpty()) ? "" : String.valueOf(xs.getFirst());
+    }
+
+    /**
+     * Strips residual HTML/XML tags and the Unicode replacement character (U+FFFD)
+     * from text extracted by GROBID, then normalizes whitespace.
+     */
+    static String cleanText(String s) {
+        if (s == null) return null;
+        String cleaned = RESIDUAL_TAGS.matcher(s).replaceAll("");
+        cleaned = cleaned.replace(String.valueOf(UNICODE_REPLACEMENT), "");
+        return normalizeWs(cleaned);
     }
 }
