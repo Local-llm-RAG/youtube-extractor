@@ -5,23 +5,30 @@ import com.data.rag.client.RagSystemRestApiService;
 import com.data.oai.persistence.PaperInternalService;
 import com.data.oai.persistence.TrackerService;
 import com.data.shared.exception.PdfDownloadException;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.data.oai.persistence.entity.Tracker;
 import com.data.oai.shared.dto.PdfContent;
 import com.data.oai.shared.dto.Record;
 import com.data.oai.shared.dto.PaperDocument;
+import com.data.oai.shared.dto.Section;
 import com.data.oai.grobid.GrobidService;
+import com.data.oai.persistence.repository.PaperDocumentRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -40,9 +47,28 @@ public class GenericFacade {
     private final RagSystemRestApiService ragService;
     private final EmbeddingProperties embeddingProperties;
     private final LanguageDetector languageDetector;
+    private final PaperDocumentRepository paperDocumentRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Resource(name = "oaiExecutor")
     private ExecutorService grobidPool;
+
+    private final AtomicLong totalBytesStored = new AtomicLong();
+
+    @PostConstruct
+    void initOnStartup() {
+        resyncSequences();
+        long existing = paperDocumentRepository.sumStoredContentBytes();
+        totalBytesStored.set(existing);
+        log.info("DB content size on startup: {}", humanReadableSize(existing));
+    }
+
+    private void resyncSequences() {
+        jdbcTemplate.execute("SELECT setval('source_record_id_seq',    GREATEST((SELECT COALESCE(MAX(id), 1) FROM source_record),    1))");
+        jdbcTemplate.execute("SELECT setval('record_document_id_seq',  GREATEST((SELECT COALESCE(MAX(id), 1) FROM record_document),  1))");
+        jdbcTemplate.execute("SELECT setval('document_section_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM document_section), 1))");
+        log.info("DB sequences resynced");
+    }
 
     public Tracker getTracker(LocalDate startDate, DataSource dataSource) {
         return trackerService.getTracker(startDate, dataSource);
@@ -118,13 +144,37 @@ public class GenericFacade {
                     apiRecord,
                     grobidDoc,
                     pdfResult.url());
+            totalBytesStored.addAndGet(estimateDocumentBytes(grobidDoc));
+        } catch (PdfDownloadException | DataIntegrityViolationException e) {
+            log.warn("Skipping sourceId={}: {}", sourceId, e.getMessage());
         } catch (Exception e) {
             log.warn("Failed to process sourceId={} with GROBID", sourceId, e);
         } finally {
             // Atomically increment at DB level — thread-safe, no JPA entity mutation from pool threads
             trackerService.incrementProcessed(tracker.getId());
-            processed.incrementAndGet();
+            int newVal = processed.incrementAndGet();
+            if (newVal % 10 == 0) {
+                log.info("Cumulative DB content stored: {} ({} documents)", humanReadableSize(totalBytesStored.get()), newVal);
+            }
         }
+    }
+
+    private static long estimateDocumentBytes(PaperDocument doc) {
+        long size = 0;
+        if (doc.teiXml() != null)       size += doc.teiXml().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.rawContent() != null)    size += doc.rawContent().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.title() != null)         size += doc.title().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.abstractText() != null)  size += doc.abstractText().getBytes(StandardCharsets.UTF_8).length;
+        for (Section s : doc.sections())
+            if (s.getText() != null)     size += s.getText().getBytes(StandardCharsets.UTF_8).length;
+        return size;
+    }
+
+    private static String humanReadableSize(long bytes) {
+        if (bytes < 1024)                     return bytes + " B";
+        if (bytes < 1024 * 1024)              return "%.1f KB".formatted(bytes / 1024.0);
+        if (bytes < 1024L * 1024 * 1024)      return "%.1f MB".formatted(bytes / (1024.0 * 1024));
+        return "%.2f GB".formatted(bytes / (1024.0 * 1024 * 1024));
     }
 
     private String detectLang(String text, String sourceId) {
