@@ -15,8 +15,8 @@ grobid:
       # path relative to the grobid-home path (e.g. grobid-home/pdfalto), you don't want to change this normally
       path: "pdfalto"
       # security for PDF parsing
-      memoryLimitMb: 6096
-      timeoutSec: 120
+      memoryLimitMb: 4096
+      timeoutSec: 60
 
     # security relative to the PDF parsing result
     blocksMax: 200000
@@ -60,8 +60,8 @@ grobid:
   # to get best performance and security
   concurrency: 2
   # when the pool is full, for queries waiting for the availability of a Grobid engine, this is the maximum time wait to try
-  # to get an engine (in seconds) - normally never change it
-  poolMaxWait: 120
+  # to get an engine (in seconds) - lowered from 120 to 30 so requests fail fast and Traefik retries on another replica
+  poolMaxWait: 30
 
   delft:
     # DeLFT global parameters

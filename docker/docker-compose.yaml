@@ -90,21 +90,35 @@ services:
         -XX:MaxGCPauseMillis=200
         -XX:+UseStringDeduplication
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8070/api/isalive"]
-      interval: 20s
+      test: ["CMD", "wget", "-qO-", "--timeout=5", "http://localhost:8070/api/isalive"]
+      interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 120s
+    mem_limit: 4g
+    memswap_limit: 4g
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=grobid_net"
+      # Health endpoint router
       - "traefik.http.routers.grobid-health.rule=PathPrefix(`/api/isalive`)"
       - "traefik.http.routers.grobid-health.entrypoints=web"
       - "traefik.http.routers.grobid-health.service=grobid-health-svc"
       - "traefik.http.services.grobid-health-svc.loadbalancer.server.port=8070"
+      # Main processing router with retry middleware
       - "traefik.http.routers.grobid-main.rule=PathPrefix(`/`)"
       - "traefik.http.routers.grobid-main.entrypoints=web"
       - "traefik.http.routers.grobid-main.service=grobid-main-svc"
+      - "traefik.http.routers.grobid-main.middlewares=grobid-retry"
       - "traefik.http.services.grobid-main-svc.loadbalancer.server.port=8070"
+      # Traefik-level health check: probes each replica every 15s, 5s timeout
+      # If a replica fails to respond within 5s, Traefik stops routing to it
+      - "traefik.http.services.grobid-main-svc.loadbalancer.healthcheck.path=/api/isalive"
+      - "traefik.http.services.grobid-main-svc.loadbalancer.healthcheck.interval=15s"
+      - "traefik.http.services.grobid-main-svc.loadbalancer.healthcheck.timeout=5s"
+      # Retry on another replica if one fails (up to 2 retries = tries all 3 replicas)
+      - "traefik.http.middlewares.grobid-retry.retry.attempts=2"
+      - "traefik.http.middlewares.grobid-retry.retry.initialinterval=1s"
 volumes:
   qdrant_storage:
 #  glutton-es-data:
