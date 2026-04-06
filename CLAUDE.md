@@ -2,6 +2,34 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MANDATORY: Route Through Lead Architect (READ THIS FIRST)
+
+**STOP. Before doing ANYTHING beyond pure read-only exploration, you MUST delegate to the Lead Architect agent.**
+
+```
+Agent(subagent_type="Lead Architect", prompt="<full user request with context>")
+```
+
+**This applies to:**
+- ANY task that involves, or will lead to, code/config/infrastructure changes
+- Analysis or investigation that the user intends to act on (e.g. "analyze X and fix it", "find the problem and propose a solution")
+- Bug fixes, features, refactors, migrations, Docker/config changes
+- Even if the user says "analyze first" — if the end goal is implementation, route immediately
+
+**The ONLY exceptions (all three conditions must be true: read-only, no intent to change, user is just asking):**
+- Pure information questions ("what does X do?", "where is Y defined?", "explain this code")
+- Codebase exploration with NO implementation intent
+- Git operations (commit, push, PR) explicitly requested by user
+
+**When in doubt, route to Lead Architect.** It is always safer to delegate than to act directly. The Lead Architect will read files, plan, decompose, and spawn the correct specialist agents.
+
+**DO NOT:**
+- Read files and start analyzing yourself before delegating (the Lead Architect does this)
+- Propose solutions yourself and then delegate implementation (the Lead Architect owns the plan)
+- Invoke implementer agents directly (only the Lead Architect spawns them)
+
+---
+
 ## Project Overview
 
 A Spring Boot 4.0.1 data extraction and processing platform that aggregates research papers (ArXiv, Zenodo, PubMed Central) and YouTube videos, enriches them with AI-powered embeddings on demand, and provides RAG (Retrieval-Augmented Generation) capabilities via a vector database (Qdrant).
@@ -199,16 +227,7 @@ All code in this project must follow these principles:
 ### Licensing
 - Only process papers with licenses that permit commercial use (CC0, CC-BY, CC-BY-SA, MIT, Apache-2.0, BSD). Reject -NC and -ND variants.
 
-## Agent Routing (MANDATORY)
-
-**IMPORTANT: For ANY code change — feature requests, bug fixes, refactors, migrations, or cross-file changes — you MUST invoke the Lead Architect agent FIRST using the Agent tool with `subagent_type: "Lead Architect"`. Do NOT make code changes directly. Do NOT invoke implementer agents directly. The Lead Architect decomposes work, delegates to specialist agents, and drives it through review.**
-
-The only exceptions where you may skip the Lead Architect:
-- Pure information questions ("what does this method do?", "where is X defined?")
-- Reading/exploring code without making changes
-- Git operations (commit, push, PR) requested by the user
-
-### Agent Roster
+## Agent Roster
 
 | Agent | Role | Owns |
 |-------|------|------|
@@ -223,3 +242,5 @@ The only exceptions where you may skip the Lead Architect:
 | **OAI Quality Auditor** | Autonomously audits OAI data quality via read-only DB queries (MCP). Only spawned on explicit user request. | `oai-quality-reports/` (output only) |
 
 Agents must respect ownership boundaries. Cross-boundary changes require coordination through the Lead Architect. See `.claude/agents/` for detailed agent definitions.
+
+Agents must not execute git commands like commit, push, etc. This will be handled by the user

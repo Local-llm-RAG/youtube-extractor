@@ -91,9 +91,9 @@ arxiv:
 oai:
   processing:
     days-back: 90
-    sources: ZENODO
-    concurrency: 10
-    queue: 20
+    sources: ARXIV
+    concurrency: 4
+    queue: 8
     http-client:
       connect-timeout-seconds: 15
       response-timeout-seconds: 180
@@ -120,7 +120,7 @@ grobid:
   fulltext-endpoint: /api/processFulltextDocument
   http-client:
     connect-timeout-seconds: 5
-    response-timeout-seconds: 300
+    response-timeout-seconds: 120
     idle-eviction-seconds: 30
   options:
     consolidate-header: true
