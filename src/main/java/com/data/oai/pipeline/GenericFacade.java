@@ -83,8 +83,8 @@ public class GenericFacade {
 
         Set<String> processedPaperIds = new java.util.HashSet<>(
                 paperInternalService.findArxivIdsProcessedInPeriod(
-                        tracker.getDateStart(),
-                        tracker.getDateEnd(),
+                        tracker.getDateStart().minusDays(100),
+                        tracker.getDateEnd().plusDays(100),
                         tracker.getDataSource()
                 )
         );
