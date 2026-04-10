@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:admin@172.21.96.1:5432/youtube-extractor"
+      ],
+      "env": {}
+    }
+  }
+}
