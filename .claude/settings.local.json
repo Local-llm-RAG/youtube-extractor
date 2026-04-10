@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(xargs -I {} find {} -type f -name \"*.java\")",
+      "Bash(psql -U postgres -d postgres -c \"\\\\d document_section\")",
+      "Bash(psql -U postgres -c \"\\\\d document_section\")",
+      "mcp__postgres__query",
+      "Bash(./gradlew compileJava)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "postgres"
+  ]
+}
