@@ -2,7 +2,7 @@ package com.data.storage;
 
 import com.data.config.properties.StorageProperties;
 import com.data.config.properties.StorageProperties.ExportMode;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,7 +40,7 @@ public class S3ExportController {
     private final StorageProperties storageProperties;
 
     /**
-     * Exports all data sources (ARXIV, ZENODO, PUBMED) sequentially to S3.
+     * Exports all data sources (ARXIV, ZENODO, PUBMED, PUBMED_S3) sequentially to S3.
      * Advances watermark per source after each successful INCREMENTAL export.
      *
      * @param mode    optional export mode override (FULL or INCREMENTAL); defaults to configured value

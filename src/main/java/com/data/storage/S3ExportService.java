@@ -5,7 +5,7 @@ import com.data.config.properties.StorageProperties.ExportMode;
 import com.data.oai.persistence.entity.*;
 import com.data.oai.persistence.repository.EmbedTranscriptChunkRepository;
 import com.data.oai.persistence.repository.RecordRepository;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
@@ -79,7 +79,7 @@ public class S3ExportService {
      */
     @Transactional(readOnly = true)
     public S3ExportResult exportToS3(DataSource dataSource, ExportMode mode,
-                                      LocalDate from, LocalDate to, Long maxSizeBytes) {
+                                     LocalDate from, LocalDate to, Long maxSizeBytes) {
         if (!storageProperties.enabled()) {
             log.debug("S3 export skipped — storage is disabled");
             return new S3ExportResult(dataSource, 0, null, false);
@@ -255,7 +255,7 @@ public class S3ExportService {
 
         return new PaperExportDto(
                 record.getSourceId(),
-                record.getOaiIdentifier(),
+                record.getExternalIdentifier(),
                 record.getDoi(),
                 record.getLicense(),
                 record.getPdfUrl(),

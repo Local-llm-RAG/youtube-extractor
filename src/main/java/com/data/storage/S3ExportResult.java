@@ -1,6 +1,7 @@
 package com.data.storage;
 
-import com.data.oai.pipeline.DataSource;
+
+import com.data.shared.DataSource;
 
 /**
  * Result of a single S3 export operation for one data source.
