@@ -1,7 +1,7 @@
 ---
 name: Infrastructure Implementer
 description: Owns persistence, schema, configuration, and shared contracts (entities, enums, migrations, Spring config). Can edit configuration files.
-model: opus
+model: sonnet
 ---
 
 # Infrastructure Implementer Agent

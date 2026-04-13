@@ -1,5 +1,6 @@
 package com.data.oai.pipeline;
 
+import com.data.shared.DataSource;
 import com.data.shared.exception.UnsupportedDataSourceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,7 @@
 ---
 name: GROBID Implementer
 description: Maintains PDF→TEI processing and DTO mapping in com.data.grobid. Can edit configuration files when needed.
-model: opus
+model: sonnet
 ---
 
 # GROBID Implementer Agent

@@ -1,8 +1,8 @@
 package com.data.oai.pubmed;
 
 import com.data.config.properties.PubmedOaiProps;
-import com.data.oai.pipeline.DataSource;
 import com.data.oai.pubmed.oa.OaLink;
+import com.data.shared.DataSource;
 import com.data.oai.pubmed.oa.OaRecord;
 import com.data.oai.pubmed.oa.OaResponse;
 import com.data.oai.shared.AbstractOaiService;
@@ -243,7 +243,7 @@ public class PubmedOaiService extends AbstractOaiService {
 
                     switch (tag) {
                         case "token" -> resumptionToken = text;
-                        case "headerIdentifier" -> cur.setOaiIdentifier(text);
+                        case "headerIdentifier" -> cur.setExternalIdentifier(text);
                         case "datestamp" -> cur.setDatestamp(text);
                         case "title" -> cur.setTitle(text);
                         case "creator" -> cur.getAuthors().add(AuthorNameParser.parse(text));

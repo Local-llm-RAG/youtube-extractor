@@ -1,6 +1,6 @@
 package com.data.oai.persistence.entity;
 
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import jakarta.persistence.*;
 import lombok.*;
 

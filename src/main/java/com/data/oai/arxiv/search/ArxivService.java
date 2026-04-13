@@ -3,7 +3,7 @@ package com.data.oai.arxiv.search;
 import com.data.config.properties.ArxivSearchProperties;
 import com.data.oai.persistence.repository.RecordRepository;
 import com.data.oai.persistence.entity.Tracker;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import com.data.oai.pipeline.GenericFacade;
 import com.data.shared.exception.OaiHarvestException;
 import com.rometools.rome.feed.synd.SyndFeed;

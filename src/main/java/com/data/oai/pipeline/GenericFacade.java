@@ -4,6 +4,7 @@ import com.data.config.properties.EmbeddingProperties;
 import com.data.rag.client.RagSystemRestApiService;
 import com.data.oai.persistence.PaperInternalService;
 import com.data.oai.persistence.TrackerService;
+import com.data.shared.DataSource;
 import com.data.shared.exception.PdfDownloadException;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.data.oai.persistence.entity.Tracker;
@@ -96,7 +97,7 @@ public class GenericFacade {
         tracker.setAllPapersForPeriod(allRecords.size());
 
         List<Record> unprocessed = allRecords.stream()
-                .peek(r -> r.setSourceId(Record.extractIdFromOai(r.getOaiIdentifier())))
+                .peek(r -> r.setSourceId(Record.extractIdFromOai(r.getExternalIdentifier())))
                 .filter(r -> nonNull(r.getSourceId()))
                 .filter(r -> !processedPaperIds.contains(r.getSourceId()))
                 .filter(r -> isNull(onlyArxivIds) || onlyArxivIds.contains(r.getSourceId()))
@@ -131,7 +132,7 @@ public class GenericFacade {
                 throw new PdfDownloadException("Empty or no pdf content found for %s".formatted(sourceId));
             }
 
-            PaperDocument grobidDoc = grobidService.processGrobidDocument(sourceId, apiRecord.getOaiIdentifier(), pdfBytes);
+            PaperDocument grobidDoc = grobidService.processGrobidDocument(sourceId, apiRecord.getExternalIdentifier(), pdfBytes);
             grobidDoc = grobidDoc.withFallbacks(apiRecord.getTitle(), apiRecord.getAbstractText());
             apiRecord.setLanguage(detectLang(grobidDoc.title() + " " + grobidDoc.abstractText(), sourceId));
 //            grobidDoc.sections().forEach(
@@ -161,7 +162,7 @@ public class GenericFacade {
 
     private static long estimateDocumentBytes(PaperDocument doc) {
         long size = 0;
-        if (doc.teiXml() != null)       size += doc.teiXml().getBytes(StandardCharsets.UTF_8).length;
+        if (doc.sourceXml() != null)    size += doc.sourceXml().getBytes(StandardCharsets.UTF_8).length;
         if (doc.rawContent() != null)    size += doc.rawContent().getBytes(StandardCharsets.UTF_8).length;
         if (doc.title() != null)         size += doc.title().getBytes(StandardCharsets.UTF_8).length;
         if (doc.abstractText() != null)  size += doc.abstractText().getBytes(StandardCharsets.UTF_8).length;

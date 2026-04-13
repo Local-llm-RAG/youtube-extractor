@@ -1,7 +1,7 @@
 package com.data.oai.arxiv;
 
 import com.data.config.properties.ArxivOaiProps;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import com.data.oai.shared.AbstractOaiService;
 import com.data.oai.shared.util.LicenseFilter;
 import com.data.oai.shared.util.XmlFactories;
@@ -116,7 +116,7 @@ public class ArxivOaiService extends AbstractOaiService {
                     if (cur == null && !"token".equals(tag)) continue;
 
                     switch (tag) {
-                        case "identifier" -> cur.setOaiIdentifier(text);
+                        case "identifier" -> cur.setExternalIdentifier(text);
                         case "datestamp" -> cur.setDatestamp(text);
                         case "categories" -> cur.getCategories().addAll(List.of(text.split("\\s+")));
                         case "comments" -> cur.setComments(text);

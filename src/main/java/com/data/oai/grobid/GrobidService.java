@@ -13,18 +13,18 @@ public class GrobidService {
 
     private final GrobidClient grobidClient;
 
-    public PaperDocument processGrobidDocument(String sourceId, String oaiIdentifier, byte[] pdfBytes) {
+    public PaperDocument processGrobidDocument(String sourceId, String externalIdentifier, byte[] pdfBytes) {
         long t0 = System.nanoTime();
         String xmlString = grobidClient.processPdfToXmlString(sourceId, pdfBytes);
         long t1 = System.nanoTime();
-        PaperDocument doc = GrobidTeiMapperJsoup.toPaperDocument(sourceId, oaiIdentifier, xmlString);
+        PaperDocument doc = GrobidTeiMapperJsoup.toPaperDocument(sourceId, externalIdentifier, xmlString);
         long t2 = System.nanoTime();
 
         log.info("GROBID {} ms | Mapping {} ms | total {} ms | id={}",
                 (t1 - t0) / 1_000_000,
                 (t2 - t1) / 1_000_000,
                 (t2 - t0) / 1_000_000,
-                oaiIdentifier);
+                externalIdentifier);
         return doc;
     }
 }

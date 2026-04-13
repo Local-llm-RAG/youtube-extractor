@@ -1,7 +1,7 @@
 package com.data.oai.persistence.repository;
 
 import com.data.oai.persistence.entity.Tracker;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

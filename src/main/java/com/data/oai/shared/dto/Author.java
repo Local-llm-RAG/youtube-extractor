@@ -6,4 +6,5 @@ import lombok.Data;
 public class Author {
     public String firstName;
     public String lastName;
+    public String orcid;
 }

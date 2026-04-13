@@ -28,14 +28,14 @@ public final class GrobidTeiMapperJsoup {
 
     private GrobidTeiMapperJsoup() {}
 
-    public static PaperDocument toPaperDocument(String arxivId, String oaiIdentifier, String teiXml) {
-        if (teiXml == null || teiXml.isBlank()) {
-            return new PaperDocument(arxivId, oaiIdentifier, null, null,
-                    List.of(new Section("BODY", 1, "", List.of())), teiXml, NO_CONTENT_MARKER,
-                    List.of(), List.of(), List.of(), List.of(), null);
+    public static PaperDocument toPaperDocument(String arxivId, String externalIdentifier, String sourceXml) {
+        if (sourceXml == null || sourceXml.isBlank()) {
+            return new PaperDocument(arxivId, externalIdentifier, null, null,
+                    List.of(new Section("BODY", 1, "", List.of())), sourceXml, NO_CONTENT_MARKER,
+                    List.of(), List.of(), List.of(), List.of(), List.of(), null);
         }
 
-        Document tei = Jsoup.parse(teiXml, "", Parser.xmlParser());
+        Document tei = Jsoup.parse(sourceXml, "", Parser.xmlParser());
 
         String title = GrobidTeiUtils.cleanText(firstText(tei, "teiHeader titleStmt > title"));
         if (GrobidTeiUtils.isBlank(title)) title = GrobidTeiUtils.cleanText(firstText(tei, "teiHeader sourceDesc biblStruct analytic title"));
@@ -61,17 +61,21 @@ public final class GrobidTeiMapperJsoup {
         // Improved: no re-parse; preserve order better; avoid table dumps but keep captions.
         String rawContent = GrobidTextExtractor.teiToPlainText(tei);
 
+        // GROBID does not extract funding info from TEI XML; PMC S3 pipeline populates this directly.
+        List<String> fundingList = List.of();
+
         return new PaperDocument(
                 arxivId,
-                oaiIdentifier,
+                externalIdentifier,
                 title,
                 abstractText,
                 sections,
-                teiXml,
+                sourceXml,
                 rawContent,
                 keywords,
                 affiliation,
                 classCodes,
+                fundingList,
                 references,
                 docType
         );

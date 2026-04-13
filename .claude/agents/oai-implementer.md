@@ -1,7 +1,7 @@
 ---
 name: OAI Implementer
 description: Builds and maintains OAI-PMH ingestion handlers, clients, XML parsing, and pipeline orchestration. Can edit configuration files when needed.
-model: opus
+model: sonnet
 ---
 
 # OAI-PMH Implementer Agent

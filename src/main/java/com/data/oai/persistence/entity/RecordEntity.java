@@ -1,6 +1,6 @@
 package com.data.oai.persistence.entity;
 
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,7 +16,7 @@ import java.util.List;
     name = "source_record",
     uniqueConstraints = {
         @UniqueConstraint(name = "uq_publication_record_source_identifier", columnNames = "source_identifier"),
-        @UniqueConstraint(name = "uq_publication_record_oai_identifier", columnNames = "oai_identifier")
+        @UniqueConstraint(name = "uq_source_record_external_identifier", columnNames = "external_identifier")
     }
 )
 @Builder
@@ -32,8 +32,8 @@ public class RecordEntity {
     @Column(name = "source_identifier", nullable = false, length = 64)
     private String sourceId;
 
-    @Column(name = "oai_identifier", length = 255)
-    private String oaiIdentifier;
+    @Column(name = "external_identifier", length = 255)
+    private String externalIdentifier;
 
     @Column(name = "datestamp")
     private LocalDate datestamp;

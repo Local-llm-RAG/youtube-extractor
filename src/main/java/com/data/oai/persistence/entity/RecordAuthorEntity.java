@@ -35,4 +35,7 @@ public class RecordAuthorEntity {
 
     @Column(name = "pos", length = 128)
     private Integer pos;
+
+    @Column(name = "orcid", length = 64)
+    private String orcid;
 }

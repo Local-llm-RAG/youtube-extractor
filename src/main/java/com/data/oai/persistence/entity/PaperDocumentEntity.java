@@ -42,8 +42,8 @@ public class PaperDocumentEntity {
     @Column(name = "abstract", columnDefinition = "text")
     private String abstractText;
 
-    @Column(name = "tei_xml", columnDefinition = "text")
-    private String teiXmlRaw;
+    @Column(name = "source_xml", columnDefinition = "text")
+    private String sourceXml;
 
     @Column(name = "raw_content", columnDefinition = "text")
     private String rawContent;
@@ -59,6 +59,10 @@ public class PaperDocumentEntity {
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "class_code_list", columnDefinition = "text[]")
     private List<String> classCodes;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "funding_list", columnDefinition = "text[]")
+    private List<String> fundingList;
 
     @Column(name = "doc_type", columnDefinition = "text")
     private String docType;

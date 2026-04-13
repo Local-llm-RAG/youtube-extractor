@@ -8,7 +8,7 @@ public interface PaperDocumentRepository extends JpaRepository<PaperDocumentEnti
 
     @Query(value = """
             SELECT COALESCE(SUM(
-                OCTET_LENGTH(COALESCE(tei_xml, '')) +
+                OCTET_LENGTH(COALESCE(source_xml, '')) +
                 OCTET_LENGTH(COALESCE(raw_content, '')) +
                 OCTET_LENGTH(COALESCE(title, '')) +
                 OCTET_LENGTH(COALESCE(abstract, ''))

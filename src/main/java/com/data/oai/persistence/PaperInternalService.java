@@ -9,7 +9,7 @@ import com.data.oai.persistence.entity.ReferenceMentionEntity;
 import com.data.oai.persistence.entity.SectionEntity;
 import com.data.oai.persistence.repository.EmbedTranscriptChunkRepository;
 import com.data.oai.persistence.repository.RecordRepository;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import com.data.oai.shared.util.DateParser;
 import com.data.oai.shared.dto.PaperDocument;
 import com.data.oai.shared.dto.Record;
@@ -58,7 +58,7 @@ public class PaperInternalService {
         LocalDate date = DateParser.parseToLocalDate(recordFromApi.getDatestamp());
         return RecordEntity.builder()
                 .sourceId(recordFromApi.getSourceId())
-                .oaiIdentifier(recordFromApi.getOaiIdentifier())
+                .externalIdentifier(recordFromApi.getExternalIdentifier())
                 .datestamp(date)
                 .comments(recordFromApi.getComments())
                 .journalRef(recordFromApi.getJournalRef())
@@ -80,6 +80,7 @@ public class PaperInternalService {
                             RecordAuthorEntity.builder()
                                     .firstName(a.getFirstName())
                                     .lastName(a.getLastName())
+                                    .orcid(a.getOrcid())
                                     .pos(i)
                                     .build()
                     );
@@ -91,11 +92,12 @@ public class PaperInternalService {
         PaperDocumentEntity doc = PaperDocumentEntity.builder()
                 .title(grobidDoc.title())
                 .abstractText(grobidDoc.abstractText())
-                .teiXmlRaw(grobidDoc.teiXml())
+                .sourceXml(grobidDoc.sourceXml())
                 .rawContent(grobidDoc.rawContent())
                 .keywords(grobidDoc.keywords())
                 .affiliations(grobidDoc.affiliation())
                 .classCodes(grobidDoc.classCodes())
+                .fundingList(grobidDoc.fundingList())
                 .docType(grobidDoc.docType())
                 .sections(new ArrayList<>())
                 .references(new ArrayList<>())
@@ -183,5 +185,14 @@ public class PaperInternalService {
                 dateEnd,
                 dataSource
         );
+    }
+
+    /**
+     * Returns every {@code sourceId} already persisted for the given data source.
+     * Used by pipelines (e.g. PMC S3) that deduplicate against the whole corpus
+     * rather than a narrow datestamp window.
+     */
+    public List<String> findAllSourceIdsByDataSource(DataSource dataSource) {
+        return recordRepository.findAllSourceIdsByDataSource(dataSource);
     }
 }

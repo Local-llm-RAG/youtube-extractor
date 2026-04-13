@@ -7,7 +7,7 @@ import java.util.List;
 
 @Data
 public class Record {
-    private String oaiIdentifier;
+    private String externalIdentifier;
     private String datestamp;
     private String comments;
     private String journalRef;
@@ -24,12 +24,12 @@ public class Record {
         return authors.getLast();
     }
 
-    public static String extractIdFromOai(String oaiIdentifier) {
-        if (oaiIdentifier == null || oaiIdentifier.isBlank()) {
+    public static String extractIdFromOai(String externalIdentifier) {
+        if (externalIdentifier == null || externalIdentifier.isBlank()) {
             return null;
         }
-        String[] parts = oaiIdentifier.split(":", 3);
-        String localId = parts.length == 3 ? parts[2] : oaiIdentifier;
+        String[] parts = externalIdentifier.split(":", 3);
+        String localId = parts.length == 3 ? parts[2] : externalIdentifier;
         if (localId.matches(".*v\\d+$")) {
             return localId.replaceAll("v\\d+$", "");
         }

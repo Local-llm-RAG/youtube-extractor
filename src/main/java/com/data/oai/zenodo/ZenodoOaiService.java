@@ -1,7 +1,7 @@
 package com.data.oai.zenodo;
 
 import com.data.config.properties.ZenodoOaiProps;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import com.data.oai.shared.AbstractOaiService;
 import com.data.oai.shared.util.LicenseFilter;
 import com.data.oai.shared.util.XmlFactories;
@@ -152,7 +152,7 @@ public class ZenodoOaiService extends AbstractOaiService {
 
                     switch (tag) {
                         case "token" -> resumptionToken = text;
-                        case "headerIdentifier" -> cur.setOaiIdentifier(text);
+                        case "headerIdentifier" -> cur.setExternalIdentifier(text);
                         case "datestamp" -> cur.setDatestamp(text);
                         case "creatorName" -> creatorName = text;
                         case "givenName" -> givenName = text;

@@ -105,7 +105,7 @@ oai:
     api-base-url: https://zenodo.org/api/records/
     pagination-delay-ms: 500
   arxiv:
-    base-url: "https://export.arxiv.org/oai2"
+    base-url: "https://oaipmh.arxiv.org/oai"
     metadata-prefix: arXiv
     pdf-base-url: "https://arxiv.org/pdf/"
     pagination-delay-ms: 1000
@@ -115,6 +115,19 @@ oai:
     set: pmc-open
     oa-service-url: "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
     pagination-delay-ms: 350
+pmcs3:
+  bucket-base-url: "https://pmc-oa-opendata.s3.amazonaws.com"
+  inventory-prefix: "inventory-reports/pmc-oa-opendata/metadata"
+  batch-size: 1000
+  concurrency: 8
+  queue: 32
+  cron: "0 17 3 * * *"
+  advisory-lock-key: 74829103
+  http-client:
+    connect-timeout-seconds: 15
+    response-timeout-seconds: 120
+    idle-eviction-seconds: 30
+    validate-after-inactivity-seconds: 2
 grobid:
   base-url: http://localhost:8070
   fulltext-endpoint: /api/processFulltextDocument
@@ -159,6 +172,10 @@ resilience4j:
         limitForPeriod: 5
         limitRefreshPeriod: 5s
         timeoutDuration: 60s
+      pmcs3:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 60s
 
   retry:
     instances:
@@ -197,6 +214,16 @@ resilience4j:
         retryExceptions:
           - org.springframework.web.client.ResourceAccessException
           - com.data.oai.RetryableApiException
+      pmcs3:
+        maxAttempts: 5
+        waitDuration: 3s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
+        exponentialMaxWaitDuration: 30s
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - com.data.oai.RetryableApiException
+          - java.io.IOException
       grobid:
         maxAttempts: 3
         waitDuration: 10s

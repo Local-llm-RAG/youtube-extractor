@@ -1,6 +1,6 @@
 package com.data.config.properties;
 
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;

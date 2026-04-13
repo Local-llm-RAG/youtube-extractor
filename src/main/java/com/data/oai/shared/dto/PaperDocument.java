@@ -9,11 +9,12 @@ public record PaperDocument(
         String title,
         String abstractText,
         List<Section> sections,
-        String teiXml,
+        String sourceXml,
         String rawContent,
         List<String> keywords,
         List<String> affiliation,
         List<String> classCodes,
+        List<String> fundingList,
         List<Reference> references,
         String docType) {
     public PaperDocument {
@@ -41,11 +42,12 @@ public record PaperDocument(
                 needTitle ? fallbackTitle : title,
                 needAbstract ? fallbackAbstract : abstractText,
                 sections,
-                teiXml,
+                sourceXml,
                 rawContent,
                 keywords,
                 affiliation,
                 classCodes,
+                fundingList,
                 references,
                 docType
         );

@@ -2,6 +2,7 @@ package com.data.oai.pipeline;
 
 import com.data.oai.shared.dto.PdfContent;
 import com.data.oai.shared.dto.Record;
+import com.data.shared.DataSource;
 
 import java.time.LocalDate;
 import java.util.List;

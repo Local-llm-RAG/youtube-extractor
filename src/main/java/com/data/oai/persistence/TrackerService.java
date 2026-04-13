@@ -2,7 +2,7 @@ package com.data.oai.persistence;
 
 import com.data.oai.persistence.entity.Tracker;
 import com.data.oai.persistence.repository.TrackerRepository;
-import com.data.oai.pipeline.DataSource;
+import com.data.shared.DataSource;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

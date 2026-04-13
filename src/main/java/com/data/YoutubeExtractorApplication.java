@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         ModelProperties.class, RagSystemClientProperties.class, EmbeddingProperties.class,
         ArxivOaiProps.class, GrobidProperties.class, ZenodoOaiProps.class, PubmedOaiProps.class,
         GptProperties.class, ArxivSearchProperties.class, OaiProcessingProperties.class,
-        QdrantGrpcConfig.class, ExceptionFileLoggerProperties.class
+        QdrantGrpcConfig.class, ExceptionFileLoggerProperties.class, PmcS3Properties.class
 })
 public class YoutubeExtractorApplication {
 

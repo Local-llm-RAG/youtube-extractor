@@ -32,12 +32,13 @@ Agent(subagent_type="Lead Architect", prompt="<full user request with context>")
 
 ## Project Overview
 
-A Spring Boot 4.0.1 data extraction and processing platform that aggregates research papers (ArXiv, Zenodo, PubMed Central) and YouTube videos, enriches them with AI-powered embeddings on demand, and provides RAG (Retrieval-Augmented Generation) capabilities via a vector database (Qdrant).
+A Spring Boot 4.0.1 data extraction and processing platform that aggregates research papers (ArXiv, Zenodo, PubMed Central, PMC S3) and YouTube videos, enriches them with AI-powered embeddings on demand, and serves the curated dataset to AI startups, institutions, and pharma companies. Data completeness and accuracy are the product.
 
 The project collects data from multiple sources:
 1. **YouTube** — Fetches video metadata via YouTube API, downloads transcripts through a Python service (using youtube-transcript-api with webshare proxies), stores everything in PostgreSQL. Supports GPT-powered transcript transformation with cost estimation.
 2. **Research Papers (OAI-PMH)** — Harvests metadata from ArXiv, Zenodo, and PubMed Central using the OAI-PMH protocol. Downloads PDFs, processes them through GROBID for structured extraction, detects language, and persists enriched data.
-3. **Query/RAG** — Searches stored data via vector/database lookup, estimates LLM costs, and performs GPT transformations.
+3. **PMC S3 Direct** — Harvests the PMC Open Access dataset directly from the `pmc-oa-opendata` S3 bucket over plain HTTPS (no AWS SDK). Uses daily inventory manifests for discovery, parses JATS XML natively (no GROBID), and filters by commercial license (CC0 / CC BY / CC BY-SA). Runs on its own schedule with tracker-based resume.
+4. **Query/RAG** — Searches stored data via vector/database lookup, estimates LLM costs, and performs GPT transformations.
 
 ## Build & Run Commands
 
@@ -63,8 +64,9 @@ Also requires: PostgreSQL on localhost:5432, Python FastAPI RAG service on local
 ### Data Processing Pipelines
 
 1. **OAI-PMH Path:** OAI protocol query → fetch metadata → download PDF → GROBID parse to TEI-XML → extract sections → language detect (Tika) → embed → store in database
-2. **YouTube Path:** YouTube API fetch → download transcripts → chunk → embed → store in Qdrant
-3. **Query Path:** Search → vector/database lookup → cost estimation → LLM transformation
+2. **PMC S3 Path:** Daily inventory manifest → filter by license → download JSON metadata → download JATS XML + .txt → native JATS parse → language from `xml:lang` → store in database
+3. **YouTube Path:** YouTube API fetch → download transcripts → chunk → embed → store in Qdrant
+4. **Query Path:** Search → vector/database lookup → cost estimation → LLM transformation
 
 ### Core Architectural Patterns
 
@@ -93,6 +95,26 @@ OAIProcessorService  →  GenericFacade
        └─ TrackerService.incrementProcessed() [atomic DB update]
 ```
 
+### Pipeline Flow (PMC S3)
+
+```
+PmcS3ProcessorService (scheduled, advisory-locked)
+  └─ Probe latest manifest.json (today → N days back)
+  └─ PmcS3Facade.processBatch(manifestKey)
+       └─ InventoryService.fetchInventory(manifestKey) → List<InventoryEntry>
+       └─ Filter: skip already-persisted pmcIds (RecordRepository.findAllSourceIdsByDataSource)
+       └─ Async via pmcS3Executor (virtual threads):
+            └─ MetadataService.fetchMetadata(entry) → ArticleMetadata (JSON)
+            └─ PmcS3LicenseFilter.isAcceptable(licenseCode)   [CC0 / CC BY / CC BY-SA only]
+            └─ PmcS3Client.downloadText(jatsKey) → JATS XML
+            └─ PmcS3Client.downloadText(txtKey) → rawContent
+            └─ JatsParser.parse() → PaperDocument (native JATS, no GROBID)
+            └─ JatsParser.extractLanguage() from xml:lang
+            └─ PaperInternalService.persistState(PMC_S3, record, doc, pdfUrl)
+            └─ PmcS3TrackerService.incrementProcessed() [atomic DB update]
+  └─ Tracker marked COMPLETED / FAILED
+```
+
 ### External Integrations
 
 | Service | Purpose | Config |
@@ -105,6 +127,7 @@ OAIProcessorService  →  GenericFacade
 | ArXiv OAI | Research paper metadata | `ArxivClient` / `ArxivOaiService` |
 | Zenodo OAI | Research paper metadata | `ZenodoClient` / `ZenodoOaiService` |
 | PMC OAI | Biomedical paper metadata | `PubmedClient` / `PubmedOaiService` (OA links via JAXB) |
+| PMC S3 (AWS Open Data) | Full-text biomedical articles (JATS, plain text, PDF) | `PmcS3Client` / `InventoryService` / `MetadataService` / `JatsParser`, plain HTTPS — no AWS SDK |
 
 ### REST API Endpoints
 
@@ -118,7 +141,13 @@ OAIProcessorService  →  GenericFacade
 
 ### Database
 
-PostgreSQL with Flyway migrations in `src/main/resources/db/migration/`. JPA with Hibernate in validate mode — schema changes require new migration files. `DataSource` is stored as `VARCHAR(128)` (not a Postgres enum), so new Java enum values need no migration.
+PostgreSQL with Flyway migrations in `src/main/resources/db/migration/`. JPA with Hibernate in validate mode — schema changes require new migration files. `DataSource` (the shared enum in `com.data.shared`) is stored as `VARCHAR` (not a Postgres enum), so new Java enum values need no migration. Current values: `ARXIV`, `ZENODO`, `PUBMED`, `PMC_S3`.
+
+Key column names to be aware of (all set by V24):
+- `source_record.external_identifier` — the upstream provider id (OAI identifier for ArXiv/Zenodo/PubMed, PMID for PMC S3). Was previously `oai_identifier`.
+- `record_document.source_xml` — the raw structured XML (TEI for OAI sources, JATS for PMC S3). Was previously `tei_xml`.
+- `record_document.funding_list` — text[] of funding statements (currently populated only by the PMC S3 pipeline from `<funding-group>/<award-group>`).
+- `record_author.orcid` — VARCHAR(64) holding the ORCID iD where supplied (PMC S3 reads this from JATS `<contrib-id>`).
 
 ## Package Structure
 
@@ -137,7 +166,7 @@ youtube/                          # YouTube data ingestion
 
 oai/                              # OAI-PMH research paper harvesting
 ├── pipeline/                     #   Pipeline orchestration (GenericFacade, OAIProcessorService,
-│                                 #     OaiSourceHandler, OaiSourceRegistry, DataSource)
+│                                 #     OaiSourceHandler, OaiSourceRegistry)
 ├── arxiv/                        #   ArXiv OAI client + service
 │   └── search/                   #     ArXiv search REST API
 ├── pubmed/                       #   PubMed OAI client + service
@@ -145,13 +174,22 @@ oai/                              # OAI-PMH research paper harvesting
 ├── zenodo/                       #   Zenodo OAI client + service + file picker
 ├── grobid/                       #   GROBID PDF processing
 │   └── tei/                      #     TEI-XML parsing (Jsoup-based extractors)
-├── persistence/                  #   Data access layer
+├── persistence/                  #   Data access layer (shared with PMC S3)
 │   ├── entity/                   #     JPA entities (RecordEntity, PaperDocumentEntity, Tracker, etc.)
 │   └── repository/               #     Spring Data JPA repositories
 └── shared/                       #   Shared OAI contracts
     ├── dto/                      #     Domain DTOs (Record, PaperDocument, OaiPage, etc.)
     ├── util/                     #     Utilities (OaiHttpSupport, LicenseFilter, AuthorNameParser, etc.)
     └── AbstractOaiService.java   #     Template method base for all OAI services
+
+pmcs3/                            # PMC S3 direct integration (separate from OAI pipeline)
+├── client/                       #   PmcS3Client — plain HTTPS against the public bucket
+├── inventory/                    #   InventoryService / InventoryEntry — daily CSV manifest
+├── metadata/                     #   MetadataService / ArticleMetadata — per-article JSON
+├── jats/                         #   JatsParser / JatsAuthorExtractor — native JATS → PaperDocument
+├── pipeline/                     #   PmcS3Facade, PmcS3ProcessorService, PmcS3LicenseFilter
+├── persistence/                  #   PmcS3Tracker entity + repository + service
+└── config/                       #   PmcS3RestClientConfig, PmcS3ExecutorConfig (virtual threads)
 
 openai/                           # GPT/LLM operations
 ├── api/                          #   REST controllers (GPTTransformationController)
@@ -234,7 +272,8 @@ All code in this project must follow these principles:
 | **Lead Architect** | Orchestrates, plans, delegates. Never edits code. | Work decomposition and sequencing |
 | **OAI Implementer** | Implements OAI-PMH pipeline code | `oai/arxiv/**`, `oai/zenodo/**`, `oai/pubmed/**`, `oai/pipeline/**`, `oai/shared/**` |
 | **GROBID Implementer** | Implements PDF→TEI processing | `oai/grobid/**` |
-| **Infrastructure Implementer** | Implements persistence, schema, config | Entities, repos, migrations, `application.yml`, `config/**` |
+| **PMC S3 Implementer** | Implements PMC S3 direct pipeline | `pmcs3/**` |
+| **Infrastructure Implementer** | Implements persistence, schema, config | Entities, repos, migrations, `application.yml`, `config/**`, shared contracts |
 | **Code Reviewer** | Reviews changes post-implementation | Read-only review of any file |
 | **Refactoring Agent** | Improves code quality, no logic changes | Any file (behavior-preserving only) |
 | **Tester** | Writes and runs tests | `src/test/**` |
