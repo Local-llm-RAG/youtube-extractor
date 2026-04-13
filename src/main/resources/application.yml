@@ -115,6 +115,16 @@ oai:
     set: pmc-open
     oa-service-url: "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
     pagination-delay-ms: 350
+storage:
+  enabled: true
+  export-mode: INCREMENTAL
+  s3:
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    bucket-name: ${AWS_S3_BUCKET}
+    region: eu-west-1
+    key-prefix: papers
+
 pmcs3:
   bucket-base-url: "https://pmc-oa-opendata.s3.amazonaws.com"
   inventory-prefix: "inventory-reports/pmc-oa-opendata/metadata"

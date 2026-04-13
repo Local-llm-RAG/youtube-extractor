@@ -11,7 +11,6 @@ import com.data.oai.persistence.entity.Tracker;
 import com.data.oai.shared.dto.PdfContent;
 import com.data.oai.shared.dto.Record;
 import com.data.oai.shared.dto.PaperDocument;
-import com.data.oai.shared.dto.Section;
 import com.data.oai.grobid.GrobidService;
 import com.data.oai.persistence.repository.PaperDocumentRepository;
 import jakarta.annotation.PostConstruct;
@@ -23,13 +22,11 @@ import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -50,17 +47,13 @@ public class GenericFacade {
     private final LanguageDetector languageDetector;
     private final PaperDocumentRepository paperDocumentRepository;
     private final JdbcTemplate jdbcTemplate;
-
     @Resource(name = "oaiExecutor")
     private ExecutorService grobidPool;
-
-    private final AtomicLong totalBytesStored = new AtomicLong();
 
     @PostConstruct
     void initOnStartup() {
         resyncSequences();
         long existing = paperDocumentRepository.sumStoredContentBytes();
-        totalBytesStored.set(existing);
         log.info("DB content size on startup: {}", humanReadableSize(existing));
     }
 
@@ -145,7 +138,6 @@ public class GenericFacade {
                     apiRecord,
                     grobidDoc,
                     pdfResult.url());
-            totalBytesStored.addAndGet(estimateDocumentBytes(grobidDoc));
         } catch (PdfDownloadException | DataIntegrityViolationException e) {
             log.warn("Skipping sourceId={}: {}", sourceId, e.getMessage());
         } catch (Exception e) {
@@ -155,20 +147,9 @@ public class GenericFacade {
             trackerService.incrementProcessed(tracker.getId());
             int newVal = processed.incrementAndGet();
             if (newVal % 10 == 0) {
-                log.info("Cumulative DB content stored: {} ({} documents)", humanReadableSize(totalBytesStored.get()), newVal);
+                log.info("Processed {} documents", newVal);
             }
         }
-    }
-
-    private static long estimateDocumentBytes(PaperDocument doc) {
-        long size = 0;
-        if (doc.sourceXml() != null)    size += doc.sourceXml().getBytes(StandardCharsets.UTF_8).length;
-        if (doc.rawContent() != null)    size += doc.rawContent().getBytes(StandardCharsets.UTF_8).length;
-        if (doc.title() != null)         size += doc.title().getBytes(StandardCharsets.UTF_8).length;
-        if (doc.abstractText() != null)  size += doc.abstractText().getBytes(StandardCharsets.UTF_8).length;
-        for (Section s : doc.sections())
-            if (s.getText() != null)     size += s.getText().getBytes(StandardCharsets.UTF_8).length;
-        return size;
     }
 
     private static String humanReadableSize(long bytes) {
