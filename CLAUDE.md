@@ -149,6 +149,21 @@ Key column names to be aware of (all set by V24):
 - `record_document.funding_list` — text[] of funding statements (currently populated only by the PMC S3 pipeline from `<funding-group>/<award-group>`).
 - `record_author.orcid` — VARCHAR(64) holding the ORCID iD where supplied (PMC S3 reads this from JATS `<contrib-id>`).
 
+#### Migration Rules (MANDATORY)
+
+**All Flyway migrations must be fully idempotent — re-running a migration against a database where it has already been applied (in whole or in part) must succeed without error and leave the schema unchanged.**
+
+Concrete requirements:
+- `CREATE TABLE` / `CREATE SEQUENCE` / `CREATE INDEX` / `CREATE VIEW` → always use `IF NOT EXISTS`.
+- `ALTER TABLE ... ADD COLUMN` / `DROP COLUMN` → always use `IF NOT EXISTS` / `IF EXISTS`.
+- `DROP TABLE` / `DROP INDEX` / `DROP SEQUENCE` → always use `IF EXISTS`.
+- `ALTER TABLE ... RENAME COLUMN` / `RENAME CONSTRAINT` and other statements that have no native `IF [NOT] EXISTS` form → wrap in a `DO $$ ... END $$` block that checks `information_schema.columns` / `pg_constraint` / `pg_indexes` first.
+- Adding constraints (`ADD CONSTRAINT`, `ADD FOREIGN KEY`, `ADD UNIQUE`) → guard with a `DO` block that queries `pg_constraint` by name, or prefer `CREATE UNIQUE INDEX IF NOT EXISTS` where semantically equivalent.
+- Data backfills (`UPDATE` / `INSERT`) → must be safe to re-run (idempotent `WHERE` clauses, `INSERT ... ON CONFLICT DO NOTHING`, etc.).
+- Every migration header must end with a short note confirming idempotency, e.g. `-- This migration is idempotent and safe to re-run.`
+
+Why: Flyway's schema history table normally prevents re-execution, but development databases, repair operations, and manual partial applies routinely break that guarantee. Idempotent migrations eliminate an entire class of "works on CI, breaks locally" failures and make `flyway repair` far safer.
+
 ## Package Structure
 
 Base package: `com.data`. Follows **package-per-feature** architecture.
