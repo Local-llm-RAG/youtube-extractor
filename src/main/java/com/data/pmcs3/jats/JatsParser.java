@@ -15,8 +15,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Parses JATS XML (the native PMC article format) into the shared
@@ -53,7 +57,7 @@ public final class JatsParser {
      */
     public static PaperDocument parse(String sourceId, String externalIdentifier, String jatsXml) {
         if (jatsXml == null || jatsXml.isBlank()) {
-            return emptyDocument(sourceId, externalIdentifier);
+            return PaperDocument.empty(sourceId, externalIdentifier);
         }
 
         Document jats = Jsoup.parse(jatsXml, "", Parser.xmlParser());
@@ -67,7 +71,7 @@ public final class JatsParser {
         List<Section> sections = extractSections(jats);
         if (sections.isEmpty()) {
             String bodyText = firstText(jats, "body");
-            sections = List.of(new Section("BODY", 1, bodyText == null ? "" : bodyText, new ArrayList<>()));
+            sections = List.of(new Section("BODY", 1, bodyText == null ? "" : bodyText, List.of()));
         }
         List<Reference> references = extractReferences(jats);
         String docType = extractDocType(jats);
@@ -98,11 +102,10 @@ public final class JatsParser {
         Document jats = Jsoup.parse(jatsXml, "", Parser.xmlParser());
         Element article = jats.selectFirst("article");
         if (article == null) return null;
-        String lang = article.attr("xml:lang");
-        if (lang == null || lang.isBlank()) {
-            lang = article.attr("lang");
-        }
-        return (lang == null || lang.isBlank()) ? null : lang;
+        return Optional.of(article.attr("xml:lang"))
+                .filter(s -> !s.isBlank())
+                .or(() -> Optional.of(article.attr("lang")).filter(s -> !s.isBlank()))
+                .orElse(null);
     }
 
     /**
@@ -130,52 +133,31 @@ public final class JatsParser {
     // Private helpers
     // ---------------------------------------------------------------
 
-    private static PaperDocument emptyDocument(String sourceId, String externalIdentifier) {
-        return new PaperDocument(
-                sourceId,
-                externalIdentifier,
-                null,
-                null,
-                List.of(new Section("BODY", 1, "", new ArrayList<>())),
-                null,
-                null,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                null
-        );
-    }
-
     private static List<Section> extractSections(Document jats) {
-        List<Section> out = new ArrayList<>();
         Element body = jats.selectFirst("body");
-        if (body == null) return out;
+        if (body == null) return List.of();
 
         // Top-level sections only. Nested subsections are flattened into their parent's text
         // so we preserve their content without duplicating titles as empty blocks.
-        for (Element sec : body.children()) {
-            if (!"sec".equals(sec.tagName())) continue;
-            String title = firstText(sec, "title");
-            String text = collectSectionText(sec);
-            int level = inferLevel(sec);
-            out.add(new Section(title == null ? "SECTION" : title, level, text, new ArrayList<>()));
-        }
-        return out;
+        return body.children().stream()
+                .filter(sec -> "sec".equals(sec.tagName()))
+                .map(sec -> {
+                    String title = firstText(sec, "title");
+                    String text = collectSectionText(sec);
+                    int level = inferLevel(sec);
+                    return new Section(title == null ? "SECTION" : title, level, text, List.of());
+                })
+                .toList();
     }
 
     private static String collectSectionText(Element sec) {
-        StringBuilder sb = new StringBuilder();
-        // Walk direct paragraph-like descendants preserving reading order.
-        Elements paragraphs = sec.select("p, list-item, caption, statement");
-        for (Element p : paragraphs) {
-            String txt = p.text();
-            if (txt != null && !txt.isBlank()) {
-                sb.append(cleanText(txt)).append('\n');
-            }
-        }
-        return sb.toString().trim();
+        // Walk paragraph-like descendants preserving reading order.
+        return sec.select("p, list-item, caption, statement").stream()
+                .map(p -> cleanText(p.text()))
+                .filter(Objects::nonNull)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.joining("\n"))
+                .trim();
     }
 
     private static int inferLevel(Element sec) {
@@ -189,33 +171,27 @@ public final class JatsParser {
     }
 
     private static List<String> extractKeywords(Document jats) {
-        List<String> out = new ArrayList<>();
-        Elements kwds = jats.select("kwd-group > kwd");
-        for (Element el : kwds) {
-            String t = cleanText(el.text());
-            if (t != null && !t.isBlank()) out.add(t);
-        }
-        return out;
+        return jats.select("kwd-group > kwd").stream()
+                .map(el -> cleanText(el.text()))
+                .filter(Objects::nonNull)
+                .filter(s -> !s.isBlank())
+                .toList();
     }
 
     private static List<String> extractAffiliations(Document jats) {
-        List<String> out = new ArrayList<>();
-        Elements affs = jats.select("aff");
-        for (Element el : affs) {
-            String t = cleanText(el.text());
-            if (t != null && !t.isBlank()) out.add(t);
-        }
-        return out;
+        return jats.select("aff").stream()
+                .map(el -> cleanText(el.text()))
+                .filter(Objects::nonNull)
+                .filter(s -> !s.isBlank())
+                .toList();
     }
 
     private static List<String> extractClassCodes(Document jats) {
-        List<String> out = new ArrayList<>();
-        Elements subjects = jats.select("subj-group > subject");
-        for (Element el : subjects) {
-            String t = cleanText(el.text());
-            if (t != null && !t.isBlank()) out.add(t);
-        }
-        return out;
+        return jats.select("subj-group > subject").stream()
+                .map(el -> cleanText(el.text()))
+                .filter(Objects::nonNull)
+                .filter(s -> !s.isBlank())
+                .toList();
     }
 
     /**
@@ -229,13 +205,11 @@ public final class JatsParser {
         for (Element ag : awards) {
             String funder = firstText(ag, "funding-source");
             String awardId = firstText(ag, "award-id");
-            StringBuilder sb = new StringBuilder();
-            if (funder != null && !funder.isBlank()) sb.append(funder);
-            if (awardId != null && !awardId.isBlank()) {
-                if (sb.length() > 0) sb.append(" — ");
-                sb.append(awardId);
-            }
-            if (sb.length() > 0) out.add(sb.toString());
+            String combined = Stream.of(funder, awardId)
+                    .filter(Objects::nonNull)
+                    .filter(s -> !s.isBlank())
+                    .collect(Collectors.joining(" — "));
+            if (!combined.isEmpty()) out.add(combined);
         }
         if (out.isEmpty()) {
             // Fallback: funding-statement under author-notes

@@ -36,39 +36,43 @@ public class PmcS3Tracker {
     @Column(name = "started_at", nullable = false)
     private OffsetDateTime startedAt;
 
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
+
     @Column(name = "total_discovered", nullable = false)
-    private Integer totalDiscovered;
+    private int totalDiscovered;
 
     @Column(name = "total_processed", nullable = false)
-    private Integer totalProcessed;
+    private int totalProcessed;
 
     @Column(name = "total_skipped", nullable = false)
-    private Integer totalSkipped;
+    private int totalSkipped;
 
     @Builder.Default
     @Column(name = "skipped_license", nullable = false)
-    private Integer skippedLicense = 0;
+    private int skippedLicense = 0;
 
     @Builder.Default
     @Column(name = "skipped_missing_metadata", nullable = false)
-    private Integer skippedMissingMetadata = 0;
+    private int skippedMissingMetadata = 0;
 
     @Builder.Default
     @Column(name = "skipped_missing_jats", nullable = false)
-    private Integer skippedMissingJats = 0;
+    private int skippedMissingJats = 0;
 
     @Builder.Default
     @Column(name = "skipped_duplicate", nullable = false)
-    private Integer skippedDuplicate = 0;
+    private int skippedDuplicate = 0;
 
     @Builder.Default
     @Column(name = "skipped_io", nullable = false)
-    private Integer skippedIo = 0;
+    private int skippedIo = 0;
 
     @Builder.Default
     @Column(name = "skipped_interrupted", nullable = false)
-    private Integer skippedInterrupted = 0;
+    private int skippedInterrupted = 0;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
-    private String status;
+    private PmcS3TrackerStatus status;
 }

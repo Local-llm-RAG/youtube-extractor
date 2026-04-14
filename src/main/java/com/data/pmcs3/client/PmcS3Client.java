@@ -1,14 +1,14 @@
 package com.data.pmcs3.client;
 
 import com.data.config.properties.PmcS3Properties;
-import com.data.oai.RetryableApiException;
+import com.data.shared.http.HttpExchangeSupport;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -55,26 +55,17 @@ public class PmcS3Client {
     @RateLimiter(name = "pmcs3")
     public byte[] downloadBytes(String key) {
         URI uri = URI.create(urlFor(key));
-        return rest.get()
-                .uri(uri)
-                .exchange((req, res) -> {
-                    HttpStatusCode status = res.getStatusCode();
-                    if (status.is2xxSuccessful()) {
-                        return res.bodyTo(byte[].class);
-                    }
-                    if (status.value() == 404) {
+        byte[] result = HttpExchangeSupport.executeExchangeOrNull(
+                rest, uri,
+                code -> {
+                    if (code == 404) {
                         log.debug("PMC S3 object not found: {}", key);
-                        return null;
+                        return true;
                     }
-                    // Retryable: rate limits and transient gateway/server errors.
-                    int code = status.value();
-                    if (code == 429 || code == 502 || code == 503 || code == 504) {
-                        throw new RetryableApiException(
-                                "PMC S3 transient HTTP " + code + " for key=" + key);
-                    }
-                    throw new PmcS3HttpException(
-                            "PMC S3 GET failed. HTTP " + code + " for key=" + key);
-                });
+                    return false;
+                },
+                "key=" + key);
+        return result;
     }
 
     /**
@@ -99,30 +90,23 @@ public class PmcS3Client {
     @RateLimiter(name = "pmcs3")
     public String listCommonPrefixes(String prefix) {
         String normalizedPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
-        URI uri = URI.create(props.bucketBaseUrl()
-                + "/?list-type=2"
-                + "&prefix=" + normalizedPrefix
-                + "&delimiter=/");
-        return rest.get()
-                .uri(uri)
-                .exchange((req, res) -> {
-                    HttpStatusCode status = res.getStatusCode();
-                    if (status.is2xxSuccessful()) {
-                        byte[] body = res.bodyTo(byte[].class);
-                        return body == null ? null : new String(body, StandardCharsets.UTF_8);
-                    }
-                    if (status.value() == 404) {
+        URI uri = UriComponentsBuilder.fromUriString(props.bucketBaseUrl() + "/")
+                .queryParam("list-type", "2")
+                .queryParam("prefix", normalizedPrefix)
+                .queryParam("delimiter", "/")
+                .build(true)
+                .toUri();
+        byte[] body = HttpExchangeSupport.executeExchangeOrNull(
+                rest, uri,
+                code -> {
+                    if (code == 404) {
                         log.debug("PMC S3 list returned 404 for prefix={}", normalizedPrefix);
-                        return null;
+                        return true;
                     }
-                    int code = status.value();
-                    if (code == 429 || code == 502 || code == 503 || code == 504) {
-                        throw new RetryableApiException(
-                                "PMC S3 transient HTTP " + code + " for list prefix=" + normalizedPrefix);
-                    }
-                    throw new PmcS3HttpException(
-                            "PMC S3 LIST failed. HTTP " + code + " for prefix=" + normalizedPrefix);
-                });
+                    return false;
+                },
+                "list prefix=" + normalizedPrefix);
+        return body == null ? null : new String(body, StandardCharsets.UTF_8);
     }
 
     /**
@@ -158,14 +142,5 @@ public class PmcS3Client {
      */
     public String metadataKey(String pmcId, int version) {
         return "metadata/PMC" + pmcId + "." + version + ".json";
-    }
-
-    /**
-     * Runtime exception raised on unexpected non-2xx, non-404 HTTP responses.
-     * Allows Resilience4j to retry transient failures (via {@code java.io.IOException}
-     * configured in application.yml) while surface-raising permanent ones.
-     */
-    public static class PmcS3HttpException extends RuntimeException {
-        public PmcS3HttpException(String message) { super(message); }
     }
 }

@@ -1,9 +1,9 @@
-package com.data.oai.shared.util;
+package com.data.shared.license;
 
 import java.util.Locale;
 
 /**
- * Shared license-checking and normalization utilities for OAI sources.
+ * Shared license-checking and normalization utilities.
  */
 public final class LicenseFilter {
 

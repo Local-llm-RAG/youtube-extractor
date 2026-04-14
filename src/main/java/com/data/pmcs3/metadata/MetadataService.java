@@ -19,9 +19,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class MetadataService {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     private final PmcS3Client client;
+    private final ObjectMapper objectMapper;
 
     /**
      * Downloads and parses the JSON metadata for the given inventory entry,
@@ -35,7 +34,7 @@ public class MetadataService {
             return null;
         }
         try {
-            return MAPPER.readValue(json, PubmedArticleMetadata.class);
+            return objectMapper.readValue(json, PubmedArticleMetadata.class);
         } catch (IOException e) {
             log.warn("Failed to parse PMC S3 metadata at key={}: {}", key, e.getMessage());
             return null;

@@ -1,5 +1,8 @@
 package com.data.pmcs3.inventory;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * A single row from a PMC S3 inventory CSV representing one article version.
  *
@@ -9,11 +12,11 @@ package com.data.pmcs3.inventory;
  * the metadata JSON key and the per-article asset keys (JATS XML, plain text,
  * PDF) from the fields on this record.
  *
- * @param pmcId    numeric PMC id without the {@code PMC} prefix, e.g. {@code "10009416"}
- * @param version  article version, usually {@code 1}
- * @param keyBase  the per-article directory name, e.g. {@code "PMC10009416.1"}.
- *                 Downstream clients append {@code /PMC{id}.{v}.xml} (or
- *                 {@code .txt}, {@code .pdf}) to get the final S3 key.
+ * @param pmcId   numeric PMC id without the {@code PMC} prefix, e.g. {@code "10009416"}
+ * @param version article version, usually {@code 1}
+ * @param keyBase the per-article directory name, e.g. {@code "PMC10009416.1"}.
+ *                Downstream clients append {@code /PMC{id}.{v}.xml} (or
+ *                {@code .txt}, {@code .pdf}) to get the final S3 key.
  */
 public record InventoryEntry(
         String pmcId,
@@ -21,9 +24,12 @@ public record InventoryEntry(
         String keyBase
 ) {
 
-    private static final String METADATA_PREFIX = "metadata/";
-    private static final String JSON_SUFFIX = ".json";
-    private static final String PMC_PREFIX = "PMC";
+    /**
+     * Matches keys of the form {@code metadata/PMC{digits}.{digits}.json}.
+     * Group 1 = pmcId digits, group 2 = version digits.
+     */
+    private static final Pattern KEY_PATTERN =
+            Pattern.compile("^metadata/PMC(\\d+)\\.(\\d+)\\.json$");
 
     /**
      * Parses an S3 object key from the PMC inventory CSV into an
@@ -37,64 +43,25 @@ public record InventoryEntry(
      *   metadata/PMC6467555.1.json
      * </pre>
      *
-     * <p>Any key that does not start with {@code metadata/}, end with
-     * {@code .json}, or whose stem is not of the form {@code PMC{id}.{version}}
-     * with a numeric id and numeric version is rejected.
+     * <p>Any key that does not match {@code metadata/PMC{id}.{version}.json}
+     * with a numeric id and numeric version is rejected (returns {@code null}).
      */
     public static InventoryEntry fromS3Key(String key) {
         if (key == null || key.isBlank()) {
             return null;
         }
-        if (!key.startsWith(METADATA_PREFIX) || !key.endsWith(JSON_SUFFIX)) {
+        Matcher m = KEY_PATTERN.matcher(key);
+        if (!m.matches()) {
             return null;
         }
-
-        // Strip the "metadata/" prefix and ".json" suffix to isolate the stem.
-        String stem = key.substring(METADATA_PREFIX.length(), key.length() - JSON_SUFFIX.length());
-
-        // Reject nested paths — the metadata dir is flat, so no extra slashes allowed.
-        if (stem.indexOf('/') >= 0) {
-            return null;
-        }
-        if (!stem.startsWith(PMC_PREFIX)) {
-            return null;
-        }
-
-        // Strip PMC prefix → "{id}.{version}".
-        String idAndVersion = stem.substring(PMC_PREFIX.length());
-        int dot = idAndVersion.indexOf('.');
-        if (dot <= 0 || dot == idAndVersion.length() - 1) {
-            return null;
-        }
-
-        String pmcId = idAndVersion.substring(0, dot);
-        if (!isAllDigits(pmcId)) {
-            return null;
-        }
-
-        String versionPart = idAndVersion.substring(dot + 1);
-        int version;
-        try {
-            version = Integer.parseInt(versionPart);
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        String pmcId = m.group(1);
+        int version = Integer.parseInt(m.group(2));;
         if (version < 0) {
             return null;
         }
-
-        return new InventoryEntry(pmcId, version, stem);
-    }
-
-    private static boolean isAllDigits(String s) {
-        if (s.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < s.length(); i++) {
-            if (!Character.isDigit(s.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
+        // keyBase is the stem used by downstream clients to build asset keys,
+        // e.g. "PMC10009416.1" (prefix stripped, suffix stripped).
+        String keyBase = "PMC" + pmcId + "." + version;
+        return new InventoryEntry(pmcId, version, keyBase);
     }
 }

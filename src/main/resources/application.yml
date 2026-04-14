@@ -130,8 +130,9 @@ pmcs3:
   inventory-prefix: "inventory-reports/pmc-oa-opendata/metadata"
   batch-size: 1000
   concurrency: 8
-  queue: 32
-  cron: "0 17 3 * * *"
+  # Daily at 02:13 UTC — PMC publishes the daily inventory folder around 02:55 UTC,
+  # so this runs shortly after new data is expected to be mostly complete.
+  cron: "0 13 2 * * *"
   advisory-lock-key: 74829103
   http-client:
     connect-timeout-seconds: 15

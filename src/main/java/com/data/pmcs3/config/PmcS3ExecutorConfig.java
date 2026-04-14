@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Provides a dedicated {@link ExecutorService} for the PMC S3 pipeline.
@@ -26,19 +24,9 @@ public class PmcS3ExecutorConfig {
 
     @Bean(name = "pmcS3Executor", destroyMethod = "shutdown")
     public ExecutorService pmcS3Executor(PmcS3Properties props) {
-        ThreadFactory factory = new ThreadFactory() {
-            private final AtomicLong counter = new AtomicLong();
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = Thread.ofVirtual()
-                        .name("pmcs3-", counter.incrementAndGet())
-                        .unstarted(r);
-                t.setDaemon(true);
-                return t;
-            }
-        };
         // Virtual threads ignore pool sizing — the props are still used by the HTTP pool
         // and rate limiter — but we expose the executor as a named bean for clarity.
-        return Executors.newThreadPerTaskExecutor(factory);
+        return Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("pmcs3-", 0).factory());
     }
 }

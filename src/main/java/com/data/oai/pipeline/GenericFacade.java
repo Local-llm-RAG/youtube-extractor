@@ -6,6 +6,7 @@ import com.data.oai.persistence.PaperInternalService;
 import com.data.oai.persistence.TrackerService;
 import com.data.shared.DataSource;
 import com.data.shared.exception.PdfDownloadException;
+import com.data.shared.i18n.LanguageConstants;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.data.oai.persistence.entity.Tracker;
 import com.data.oai.shared.dto.PdfContent;
@@ -36,7 +37,7 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class GenericFacade {
 
-    private static final String DEFAULT_LANGUAGE = "en";
+    private static final String DEFAULT_LANGUAGE = LanguageConstants.DEFAULT_LANGUAGE;
 
     private final OaiSourceRegistry sourceRegistry;
     private final GrobidService grobidService;

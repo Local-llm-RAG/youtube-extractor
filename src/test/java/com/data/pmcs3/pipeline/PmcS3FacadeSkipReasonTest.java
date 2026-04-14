@@ -9,6 +9,7 @@ import com.data.pmcs3.inventory.InventoryService;
 import com.data.pmcs3.metadata.PubmedArticleMetadata;
 import com.data.pmcs3.metadata.MetadataService;
 import com.data.pmcs3.persistence.PmcS3TrackerService;
+import com.data.pmcs3.persistence.SkipReason;
 import com.data.pmcs3.persistence.entity.PmcS3Tracker;
 import com.data.shared.DataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +60,6 @@ class PmcS3FacadeSkipReasonTest {
                 "inventory/",
                 10, // batchSize
                 2,  // concurrency
-                8,
                 "0 17 3 * * *",
                 42L,
                 new HttpClientProperties(10, 30, 60, null)
@@ -75,7 +75,6 @@ class PmcS3FacadeSkipReasonTest {
         );
 
         ReflectionTestUtils.setField(facade, "pmcS3Executor", new SameThreadExecutorService());
-        ReflectionTestUtils.invokeMethod(facade, "init");
     }
 
     @Test
@@ -86,11 +85,11 @@ class PmcS3FacadeSkipReasonTest {
 
         facade.processBatch("miss-meta");
 
-        verify(trackerService, times(1)).incrementSkippedMissingMetadata(tracker.getId());
-        verify(trackerService, never()).incrementSkippedLicense(tracker.getId());
-        verify(trackerService, never()).incrementSkippedMissingJats(tracker.getId());
-        verify(trackerService, never()).incrementSkippedDuplicate(tracker.getId());
-        verify(trackerService, never()).incrementSkippedIo(tracker.getId());
+        verify(trackerService, times(1)).incrementSkipped(tracker.getId(), SkipReason.MISSING_METADATA);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.LICENSE);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.MISSING_JATS);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.DUPLICATE);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.IO);
         verify(trackerService, never()).incrementProcessed(tracker.getId());
     }
 
@@ -103,8 +102,8 @@ class PmcS3FacadeSkipReasonTest {
 
         facade.processBatch("lic");
 
-        verify(trackerService, times(1)).incrementSkippedLicense(tracker.getId());
-        verify(trackerService, never()).incrementSkippedMissingJats(tracker.getId());
+        verify(trackerService, times(1)).incrementSkipped(tracker.getId(), SkipReason.LICENSE);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.MISSING_JATS);
         verify(trackerService, never()).incrementProcessed(tracker.getId());
     }
 
@@ -121,7 +120,7 @@ class PmcS3FacadeSkipReasonTest {
 
         facade.processBatch("no-xml-url");
 
-        verify(trackerService, times(1)).incrementSkippedMissingJats(tracker.getId());
+        verify(trackerService, times(1)).incrementSkipped(tracker.getId(), SkipReason.MISSING_JATS);
         // Critical: the early short-circuit must avoid the S3 JATS GET.
         verify(client, never()).downloadText(anyString());
         verify(trackerService, never()).incrementProcessed(tracker.getId());
@@ -138,7 +137,7 @@ class PmcS3FacadeSkipReasonTest {
 
         facade.processBatch("blank-jats");
 
-        verify(trackerService, times(1)).incrementSkippedMissingJats(tracker.getId());
+        verify(trackerService, times(1)).incrementSkipped(tracker.getId(), SkipReason.MISSING_JATS);
         verify(trackerService, never()).incrementProcessed(tracker.getId());
     }
 
@@ -152,8 +151,8 @@ class PmcS3FacadeSkipReasonTest {
 
         facade.processBatch("dup");
 
-        verify(trackerService, times(1)).incrementSkippedDuplicate(tracker.getId());
-        verify(trackerService, never()).incrementSkippedIo(tracker.getId());
+        verify(trackerService, times(1)).incrementSkipped(tracker.getId(), SkipReason.DUPLICATE);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.IO);
         verify(trackerService, never()).incrementProcessed(tracker.getId());
     }
 
@@ -167,8 +166,8 @@ class PmcS3FacadeSkipReasonTest {
 
         facade.processBatch("io");
 
-        verify(trackerService, times(1)).incrementSkippedIo(tracker.getId());
-        verify(trackerService, never()).incrementSkippedDuplicate(tracker.getId());
+        verify(trackerService, times(1)).incrementSkipped(tracker.getId(), SkipReason.IO);
+        verify(trackerService, never()).incrementSkipped(tracker.getId(), SkipReason.DUPLICATE);
         verify(trackerService, never()).incrementProcessed(tracker.getId());
     }
 

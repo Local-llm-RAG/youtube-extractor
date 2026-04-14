@@ -12,9 +12,10 @@ import com.data.pmcs3.metadata.PubmedArticleMetadata;
 import com.data.pmcs3.metadata.MetadataService;
 import com.data.config.properties.PmcS3Properties;
 import com.data.pmcs3.persistence.PmcS3TrackerService;
+import com.data.pmcs3.persistence.SkipReason;
 import com.data.pmcs3.persistence.entity.PmcS3Tracker;
 import com.data.shared.DataSource;
-import jakarta.annotation.PostConstruct;
+import com.data.shared.i18n.LanguageConstants;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +24,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -42,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class PmcS3Facade {
 
-    private static final String DEFAULT_LANGUAGE = "en";
+    private static final String DEFAULT_LANGUAGE = LanguageConstants.DEFAULT_LANGUAGE;
 
     private final PmcS3Client client;
     private final InventoryService inventoryService;
@@ -53,13 +54,6 @@ public class PmcS3Facade {
 
     @Resource(name = "pmcS3Executor")
     private ExecutorService pmcS3Executor;
-
-    private Semaphore inFlight;
-
-    @PostConstruct
-    void init() {
-        this.inFlight = new Semaphore(Math.max(1, props.concurrency()));
-    }
 
     /**
      * Processes a single inventory manifest end-to-end. The manifest key
@@ -117,84 +111,114 @@ public class PmcS3Facade {
     }
 
     private void processOne(PmcS3Tracker tracker, InventoryEntry entry, AtomicInteger processed) {
-        String pmcId = entry.pmcId();
-        try {
-            inFlight.acquire();
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            trackerService.incrementSkippedInterrupted(tracker.getId());
-            return;
-        }
-        try {
-            processOneInternal(tracker, entry, processed, pmcId);
-        } finally {
-            inFlight.release();
-        }
+        processOneInternal(tracker, entry, processed, entry.pmcId());
     }
 
     private void processOneInternal(PmcS3Tracker tracker, InventoryEntry entry, AtomicInteger processed, String pmcId) {
         try {
-            PubmedArticleMetadata metadata = metadataService.fetchMetadata(entry);
-            if (metadata == null) {
-                log.debug("Skipping PMC {} — no JSON metadata", pmcId);
-                trackerService.incrementSkippedMissingMetadata(tracker.getId());
-                return;
-            }
+            PubmedArticleMetadata metadata = loadAndValidateMetadata(entry, tracker, pmcId);
+            if (metadata == null) return;
 
-            if (!PmcS3LicenseFilter.isAcceptable(metadata.licenseCode())) {
-                log.debug("Skipping PMC {} — license {} not commercially usable",
-                        pmcId, metadata.licenseCode());
-                trackerService.incrementSkippedLicense(tracker.getId());
-                return;
-            }
+            AssetBundle assets = downloadArticleAssets(entry, metadata, tracker, pmcId);
+            if (assets == null) return;
 
-            // Author manuscripts frequently have no JATS URL advertised in
-            // metadata — short-circuit here to avoid a wasted S3 GET and to
-            // keep the missing-JATS counter accurate.
-            if (metadata.xmlUrl() == null || metadata.xmlUrl().isBlank()) {
-                log.debug("Skipping PMC {} — metadata has no xml_url (likely author manuscript)", pmcId);
-                trackerService.incrementSkippedMissingJats(tracker.getId());
-                return;
-            }
-
-            String jatsKey = client.articleKey(pmcId, entry.version(), "xml");
-            String jatsXml = client.downloadText(jatsKey);
-            if (jatsXml == null || jatsXml.isBlank()) {
-                log.debug("Skipping PMC {} — no JATS XML", pmcId);
-                trackerService.incrementSkippedMissingJats(tracker.getId());
-                return;
-            }
-
-            String txtKey = client.articleKey(pmcId, entry.version(), "txt");
-            String rawContent = client.downloadText(txtKey);
-
-            PaperDocument paperDoc = JatsParser.parse(pmcId, metadata.pmid(), jatsXml);
-            // Re-assemble with rawContent that the facade downloaded separately.
-            paperDoc = withRawContent(paperDoc, rawContent);
-
-            String language = JatsParser.extractLanguage(jatsXml);
-            if (language == null || language.isBlank()) language = DEFAULT_LANGUAGE;
-
-            String pdfUrl = metadata.pdfUrl() != null
-                    ? metadata.pdfUrl()
-                    : client.urlFor(client.articleKey(pmcId, entry.version(), "pdf"));
-
-            Record record = buildRecord(metadata, pmcId, jatsXml, language);
-
-            paperInternalService.persistState(DataSource.PMC_S3, record, paperDoc, pdfUrl);
-            trackerService.incrementProcessed(tracker.getId());
-
-            int newVal = processed.incrementAndGet();
-            if (newVal % 50 == 0) {
-                log.info("PMC S3 processed {} records so far (batch={})",
-                        newVal, tracker.getBatchId());
-            }
+            PaperDocument paperDoc = buildPaperDocument(entry, metadata, assets, pmcId);
+            persistRecord(entry, metadata, assets, paperDoc, tracker, processed, pmcId);
         } catch (DataIntegrityViolationException e) {
             log.warn("PMC S3 skipping pmcId={} (duplicate): {}", pmcId, e.getMessage());
-            trackerService.incrementSkippedDuplicate(tracker.getId());
+            trackerService.incrementSkipped(tracker.getId(), SkipReason.DUPLICATE);
         } catch (Exception e) {
             log.warn("PMC S3 failed to process pmcId={}: {}", pmcId, e.getMessage());
-            trackerService.incrementSkippedIo(tracker.getId());
+            trackerService.incrementSkipped(tracker.getId(), SkipReason.IO);
+        }
+    }
+
+    /**
+     * Fetches and validates per-article JSON metadata. Returns {@code null}
+     * (and increments the appropriate skip counter) if the article cannot be
+     * processed.
+     */
+    private PubmedArticleMetadata loadAndValidateMetadata(InventoryEntry entry, PmcS3Tracker tracker, String pmcId) {
+        PubmedArticleMetadata metadata = metadataService.fetchMetadata(entry);
+        if (metadata == null) {
+            log.debug("Skipping PMC {} — no JSON metadata", pmcId);
+            trackerService.incrementSkipped(tracker.getId(), SkipReason.MISSING_METADATA);
+            return null;
+        }
+
+        if (!PmcS3LicenseFilter.isAcceptable(metadata.licenseCode())) {
+            log.debug("Skipping PMC {} — license {} not commercially usable",
+                    pmcId, metadata.licenseCode());
+            trackerService.incrementSkipped(tracker.getId(), SkipReason.LICENSE);
+            return null;
+        }
+
+        // Author manuscripts frequently have no JATS URL advertised in
+        // metadata — short-circuit here to avoid a wasted S3 GET and to
+        // keep the missing-JATS counter accurate.
+        if (metadata.xmlUrl() == null || metadata.xmlUrl().isBlank()) {
+            log.debug("Skipping PMC {} — metadata has no xml_url (likely author manuscript)", pmcId);
+            trackerService.incrementSkipped(tracker.getId(), SkipReason.MISSING_JATS);
+            return null;
+        }
+
+        return metadata;
+    }
+
+    /**
+     * Downloads the JATS XML and plain-text content for the article. Returns
+     * {@code null} (and increments the appropriate skip counter) if the JATS
+     * XML is absent.
+     */
+    private AssetBundle downloadArticleAssets(InventoryEntry entry, PubmedArticleMetadata metadata,
+                                              PmcS3Tracker tracker, String pmcId) {
+        String jatsKey = client.articleKey(pmcId, entry.version(), "xml");
+        String jatsXml = client.downloadText(jatsKey);
+        if (jatsXml == null || jatsXml.isBlank()) {
+            log.debug("Skipping PMC {} — no JATS XML", pmcId);
+            trackerService.incrementSkipped(tracker.getId(), SkipReason.MISSING_JATS);
+            return null;
+        }
+
+        String txtKey = client.articleKey(pmcId, entry.version(), "txt");
+        String rawContent = client.downloadText(txtKey);
+
+        String pdfUrl = metadata.pdfUrl() != null
+                ? metadata.pdfUrl()
+                : client.urlFor(client.articleKey(pmcId, entry.version(), "pdf"));
+
+        return new AssetBundle(jatsXml, rawContent, pdfUrl);
+    }
+
+    /**
+     * Parses the JATS XML into a {@link PaperDocument}, merging in the
+     * separately downloaded plain-text raw content.
+     */
+    private PaperDocument buildPaperDocument(InventoryEntry entry, PubmedArticleMetadata metadata,
+                                             AssetBundle assets, String pmcId) {
+        PaperDocument paperDoc = JatsParser.parse(pmcId, metadata.pmid(), assets.jatsXml());
+        // Re-assemble with rawContent that the facade downloaded separately.
+        return paperDoc.withRawContent(assets.rawContent());
+    }
+
+    /**
+     * Persists the article, updates the tracker, and logs progress milestones.
+     */
+    private void persistRecord(InventoryEntry entry, PubmedArticleMetadata metadata,
+                               AssetBundle assets, PaperDocument paperDoc,
+                               PmcS3Tracker tracker, AtomicInteger processed, String pmcId) {
+        String language = JatsParser.extractLanguage(assets.jatsXml());
+        if (language == null || language.isBlank()) language = DEFAULT_LANGUAGE;
+
+        Record record = buildRecord(metadata, pmcId, assets.jatsXml(), language);
+
+        paperInternalService.persistState(DataSource.PMC_S3, record, paperDoc, assets.pdfUrl());
+        trackerService.incrementProcessed(tracker.getId());
+
+        int newVal = processed.incrementAndGet();
+        if (newVal % 50 == 0) {
+            log.info("PMC S3 processed {} records so far (batch={})",
+                    newVal, tracker.getBatchId());
         }
     }
 
@@ -248,28 +272,16 @@ public class PmcS3Facade {
     }
 
     private static String licenseUrlOrCode(PubmedArticleMetadata metadata) {
-        if (metadata.licenseUrl() != null && !metadata.licenseUrl().isBlank()) {
-            return metadata.licenseUrl();
-        }
-        return metadata.licenseCode();
+        return Optional.ofNullable(metadata.licenseUrl())
+                .filter(s -> !s.isBlank())
+                .orElse(metadata.licenseCode());
     }
 
-    private static PaperDocument withRawContent(PaperDocument doc, String rawContent) {
-        if (rawContent == null) return doc;
-        return new PaperDocument(
-                doc.sourceId(),
-                doc.sourceIdentifier(),
-                doc.title(),
-                doc.abstractText(),
-                doc.sections(),
-                doc.sourceXml(),
-                rawContent,
-                doc.keywords(),
-                doc.affiliation(),
-                doc.classCodes(),
-                doc.fundingList(),
-                doc.references(),
-                doc.docType()
-        );
-    }
+    /**
+     * Bundles the downloaded S3 assets for a single article so they can be
+     * passed between the download and parse/persist phases without additional
+     * fields on the facade itself.
+     */
+    private record AssetBundle(String jatsXml, String rawContent, String pdfUrl) {}
+
 }

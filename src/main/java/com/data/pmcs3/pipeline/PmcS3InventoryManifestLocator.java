@@ -2,13 +2,10 @@ package com.data.pmcs3.pipeline;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.jsoup.parser.Parser;
-import org.jsoup.select.Elements;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -64,46 +61,27 @@ public final class PmcS3InventoryManifestLocator {
             return null;
         }
         Document doc = Jsoup.parse(listObjectsV2Xml, "", Parser.xmlParser());
-        Elements prefixElements = doc.select("CommonPrefixes > Prefix");
-        List<String> dayPrefixes = new ArrayList<>(prefixElements.size());
-        for (Element el : prefixElements) {
-            String raw = el.text();
-            if (raw == null) {
-                continue;
-            }
-            String trimmed = raw.trim();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            // Strip any trailing slash so prefixes compare cleanly and we can
-            // re-append the manifest filename uniformly.
-            String normalized = trimmed.endsWith("/")
-                    ? trimmed.substring(0, trimmed.length() - 1)
-                    : trimmed;
-            // Only accept day-folder prefixes whose last segment matches the
-            // ISO timestamp pattern. This filters out siblings like "hive/"
-            // that live alongside the real daily folders under the inventory
-            // prefix but have no manifest.json.
-            int lastSlash = normalized.lastIndexOf('/');
-            String lastSegment = lastSlash < 0
-                    ? normalized
-                    : normalized.substring(lastSlash + 1);
-            if (!DAY_FOLDER_PATTERN.matcher(lastSegment).matches()) {
-                continue;
-            }
-            dayPrefixes.add(normalized);
-        }
-        if (dayPrefixes.isEmpty()) {
-            return null;
-        }
         // ISO-8601 timestamps in the prefix sort correctly as plain strings,
         // so a lexicographic max gives us the latest published day.
-        String latest = dayPrefixes.stream()
+        return doc.select("CommonPrefixes > Prefix").stream()
+                .map(el -> el.text())
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                // Strip any trailing slash so prefixes compare cleanly and we can
+                // re-append the manifest filename uniformly.
+                .map(s -> s.endsWith("/") ? s.substring(0, s.length() - 1) : s)
+                // Only accept day-folder prefixes whose last segment matches the
+                // ISO timestamp pattern. This filters out siblings like "hive/"
+                // that live alongside the real daily folders under the inventory
+                // prefix but have no manifest.json.
+                .filter(s -> {
+                    int lastSlash = s.lastIndexOf('/');
+                    String lastSegment = lastSlash < 0 ? s : s.substring(lastSlash + 1);
+                    return DAY_FOLDER_PATTERN.matcher(lastSegment).matches();
+                })
                 .max(Comparator.naturalOrder())
+                .map(p -> p + "/" + MANIFEST_FILENAME)
                 .orElse(null);
-        if (latest == null) {
-            return null;
-        }
-        return latest + "/" + MANIFEST_FILENAME;
     }
 }

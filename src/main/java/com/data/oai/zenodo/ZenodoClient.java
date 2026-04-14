@@ -1,8 +1,8 @@
 package com.data.oai.zenodo;
 
 import com.data.config.properties.ZenodoOaiProps;
-import com.data.oai.shared.util.OaiHttpSupport;
-import com.data.shared.exception.OaiHarvestException;
+import com.data.shared.http.HttpExchangeSupport;
+import com.data.shared.exception.HarvestException;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,9 +27,9 @@ public class ZenodoClient {
     @RateLimiter(name = "zenodo")
     public byte[] listRecords(String baseUrl, String from, String until,
                               String token, String metadataPrefix) {
-        URI uri = OaiHttpSupport.buildListRecordsUri(baseUrl, from, until, token, metadataPrefix);
+        URI uri = HttpExchangeSupport.buildListRecordsUri(baseUrl, from, until, token, metadataPrefix);
         // Zenodo returns 422 for certain OAI error responses that need parsing
-        return OaiHttpSupport.executeOaiExchange(rest, uri, code -> code == 422, uri.toString());
+        return HttpExchangeSupport.executeExchange(rest, uri, code -> code == 422, uri.toString());
     }
 
     @Retry(name = "zenodo")
@@ -44,8 +44,8 @@ public class ZenodoClient {
                     if (status.is2xxSuccessful()) {
                         return res.bodyTo(ZenodoRecord.class);
                     }
-                    OaiHttpSupport.throwIfRetryable(status, "recordId " + recordId);
-                    throw new OaiHarvestException(
+                    HttpExchangeSupport.throwIfRetryable(status, "recordId " + recordId);
+                    throw new HarvestException(
                             "Zenodo getRecord failed. HTTP " + status.value() + " for recordId " + recordId);
                 });
     }
@@ -53,7 +53,7 @@ public class ZenodoClient {
     @Retry(name = "zenodo")
     @RateLimiter(name = "zenodo")
     public byte[] downloadFile(String url) {
-        URI uri = OaiHttpSupport.toEncodedUri(url);
-        return OaiHttpSupport.executeOaiExchange(rest, uri, code -> false, url);
+        URI uri = HttpExchangeSupport.toEncodedUri(url);
+        return HttpExchangeSupport.executeExchange(rest, uri, code -> false, url);
     }
 }

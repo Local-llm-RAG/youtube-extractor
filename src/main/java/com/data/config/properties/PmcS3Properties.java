@@ -15,7 +15,6 @@ public record PmcS3Properties(
     String inventoryPrefix,
     int batchSize,
     int concurrency,
-    int queue,
     String cron,
     long advisoryLockKey,
     HttpClientProperties httpClient

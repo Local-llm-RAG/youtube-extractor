@@ -18,8 +18,9 @@ You MUST use the **Agent tool** to spawn specialist agents for implementation. D
 4. **Spawn** the Code Reviewer agent to review the changes.
 5. **If the reviewer finds issues**, spawn the responsible implementer again to fix them.
 6. **For risky changes**, spawn the Tester agent to verify correctness.
-7. **Manual testing (ONLY when explicitly requested by the user):** Spawn the Manual Tester agent as the FINAL step. This agent starts the application, monitors logs, and reports runtime behavior. Never spawn this agent unless the user's prompt explicitly asks for manual testing (e.g., "test this manually", "run the app and check logs", "include manual testing"). **The Manual Tester is interactive** — after initial spawn it returns findings and waits. Use `SendMessage` to relay user commands and questions to it. Keep the loop going until the user says testing is done.
-8. **Return** a summary of all work completed to the user.
+7. **Documentation sync (when applicable — see trigger criteria below):** Spawn the Documentation Agent to bring `CLAUDE.md`, `docs/**`, and agent definitions back in sync with the change.
+8. **Manual testing (ONLY when explicitly requested by the user):** Spawn the Manual Tester agent as the FINAL step. This agent starts the application, monitors logs, and reports runtime behavior. Never spawn this agent unless the user's prompt explicitly asks for manual testing (e.g., "test this manually", "run the app and check logs", "include manual testing"). **The Manual Tester is interactive** — after initial spawn it returns findings and waits. Use `SendMessage` to relay user commands and questions to it. Keep the loop going until the user says testing is done.
+9. **Return** a summary of all work completed to the user.
 
 ### Agent tool usage examples
 
@@ -55,6 +56,30 @@ Agent(subagent_type="Tester", prompt="Write unit tests for the license filtering
 | Code Reviewer | Post-implementation review | Read-only review of any file |
 | Manual Tester | Runtime verification via app startup and log analysis | `manual-test-reports/*.md` (output only, read-only on source code) |
 | OAI Quality Auditor | Read-only DB auditing of OAI data quality via MCP. Only spawned on explicit user request. | `oai-quality-reports/*.md` (output only, no code changes) |
+| Documentation Agent | Creates, updates, and reorganizes all markdown documentation. Read-only on source code. | `CLAUDE.md`, `docs/**/*.md`, `.claude/agents/*.md` (markdown only — never code, config, or migrations) |
+
+## When to Spawn the Documentation Agent
+
+You decide whether the Documentation Agent is needed based on the nature of the change. Spawn it as part of the workflow when **any** of these apply:
+
+- The user explicitly asks for documentation work ("update the docs", "audit CLAUDE.md", "document this feature").
+- A new agent is added to `.claude/agents/` — the roster in `CLAUDE.md` and the ownership map above must be updated.
+- A change meaningfully alters architecture, pipelines, integrations, public contracts, or agent responsibilities:
+  - New data source or new external integration.
+  - New pipeline stage or reshaped pipeline.
+  - New REST endpoint or renamed REST endpoint.
+  - Renamed package, moved package, or DTO field changes visible in docs.
+  - Flyway migration that changes a column name or adds an enum value already referenced in docs.
+- A significant refactor lands that invalidates language in existing docs.
+
+**Do NOT spawn the Documentation Agent for:**
+
+- Trivial bug fixes that don't change public contracts.
+- Internal refactors (private method extraction, local renames) that don't touch types, packages, DTOs, enums, or endpoints.
+- Test-only changes.
+- Config tweaks that don't introduce new env vars or external services.
+
+When in doubt after a non-trivial change, spawn it — it is read-only on code and cheap. The cost of stale docs is higher than the cost of one Documentation Agent pass.
 
 ## Sequencing Rules
 

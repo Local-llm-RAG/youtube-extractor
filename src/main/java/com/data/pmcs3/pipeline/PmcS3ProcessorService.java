@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+import java.util.stream.IntStream;
 
 /**
  * Scheduled entry point for the PMC S3 pipeline.
@@ -81,12 +83,11 @@ public class PmcS3ProcessorService {
      * {@code 01-00Z} convention for up to {@code MANIFEST_FALLBACK_DAYS}.
      */
     private String findLatestAvailableManifestKey() {
-        String fromListing = findViaListObjects();
-        if (fromListing != null) {
-            return fromListing;
-        }
-        log.warn("PMC S3 ListObjectsV2 discovery returned no prefixes — falling back to deterministic walk-back");
-        return findViaDayWalkBack();
+        return Optional.ofNullable(findViaListObjects())
+                .orElseGet(() -> {
+                    log.warn("PMC S3 ListObjectsV2 discovery returned no prefixes — falling back to deterministic walk-back");
+                    return findViaDayWalkBack();
+                });
     }
 
     private String findViaListObjects() {
@@ -114,17 +115,12 @@ public class PmcS3ProcessorService {
 
     private String findViaDayWalkBack() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        for (int d = 0; d < MANIFEST_FALLBACK_DAYS; d++) {
-            LocalDate day = today.minusDays(d);
-            String key = props.inventoryPrefix() + "/"
-                    + day.format(UTC_DAY)
-                    + "/manifest.json";
-            byte[] probe = client.downloadBytes(key);
-            if (probe != null) {
-                return key;
-            }
-            log.debug("PMC S3 no manifest yet for {}", day);
-        }
-        return null;
+        return IntStream.range(0, MANIFEST_FALLBACK_DAYS)
+                .mapToObj(today::minusDays)
+                .map(day -> props.inventoryPrefix() + "/" + day.format(UTC_DAY) + "/manifest.json")
+                .peek(key -> log.debug("PMC S3 probing manifest key={}", key))
+                .filter(key -> client.downloadBytes(key) != null)
+                .findFirst()
+                .orElse(null);
     }
 }

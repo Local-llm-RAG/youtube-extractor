@@ -1,6 +1,7 @@
 package com.data.pmcs3.persistence;
 
 import com.data.pmcs3.persistence.entity.PmcS3Tracker;
+import com.data.pmcs3.persistence.entity.PmcS3TrackerStatus;
 import com.data.pmcs3.persistence.repository.PmcS3TrackerRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +19,6 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class PmcS3TrackerService {
-
-    public static final String STATUS_RUNNING = "RUNNING";
-    public static final String STATUS_COMPLETED = "COMPLETED";
-    public static final String STATUS_FAILED = "FAILED";
 
     private final PmcS3TrackerRepository repository;
 
@@ -44,33 +41,24 @@ public class PmcS3TrackerService {
                 .totalDiscovered(0)
                 .totalProcessed(0)
                 .totalSkipped(0)
-                .status(STATUS_RUNNING)
+                .status(PmcS3TrackerStatus.RUNNING)
                 .build();
         return repository.save(tracker);
     }
 
     @Transactional
-    public void updateDiscovered(Long id, int totalDiscovered) {
-        repository.findById(id).ifPresent(t -> {
-            t.setTotalDiscovered(totalDiscovered);
-            repository.save(t);
-        });
+    public void updateDiscovered(Long id, int count) {
+        repository.updateDiscovered(id, count);
     }
 
     @Transactional
     public void markCompleted(Long id) {
-        repository.findById(id).ifPresent(t -> {
-            t.setStatus(STATUS_COMPLETED);
-            repository.save(t);
-        });
+        repository.markStatus(id, PmcS3TrackerStatus.COMPLETED, OffsetDateTime.now());
     }
 
     @Transactional
     public void markFailed(Long id) {
-        repository.findById(id).ifPresent(t -> {
-            t.setStatus(STATUS_FAILED);
-            repository.save(t);
-        });
+        repository.markStatus(id, PmcS3TrackerStatus.FAILED, OffsetDateTime.now());
     }
 
     /**
@@ -83,64 +71,19 @@ public class PmcS3TrackerService {
     }
 
     /**
-     * Atomically increments the license-rejection skip counter along with
-     * {@code total_skipped}. Used when a record's license is not on the
-     * commercially-usable allow-list.
+     * Atomically increments the per-reason skip counter and the aggregate
+     * {@code total_skipped} counter in a single DB statement.
      */
     @Transactional
-    public void incrementSkippedLicense(Long id) {
-        repository.incrementSkippedLicense(id);
-    }
-
-    /**
-     * Atomically increments the missing-metadata skip counter along with
-     * {@code total_skipped}. Used when no JSON metadata exists for a PMC id.
-     */
-    @Transactional
-    public void incrementSkippedMissingMetadata(Long id) {
-        repository.incrementSkippedMissingMetadata(id);
-    }
-
-    /**
-     * Atomically increments the missing-JATS skip counter along with
-     * {@code total_skipped}. Used when the JATS XML is missing, empty, or
-     * the metadata record advertises no {@code xml_url} (author manuscripts).
-     */
-    @Transactional
-    public void incrementSkippedMissingJats(Long id) {
-        repository.incrementSkippedMissingJats(id);
-    }
-
-    /**
-     * Atomically increments the duplicate skip counter along with
-     * {@code total_skipped}. Used when persistence raises
-     * {@link org.springframework.dao.DataIntegrityViolationException} — most
-     * commonly a unique-constraint violation on {@code source_identifier}.
-     */
-    @Transactional
-    public void incrementSkippedDuplicate(Long id) {
-        repository.incrementSkippedDuplicate(id);
-    }
-
-    /**
-     * Atomically increments the I/O skip counter along with
-     * {@code total_skipped}. Used as the catch-all for any other exception
-     * raised during per-article processing (HTTP failures, parsing errors,
-     * etc.).
-     */
-    @Transactional
-    public void incrementSkippedIo(Long id) {
-        repository.incrementSkippedIo(id);
-    }
-
-    /**
-     * Atomically increments the interrupted skip counter along with
-     * {@code total_skipped}. Used when the per-article worker is interrupted
-     * while acquiring the in-flight semaphore during shutdown.
-     */
-    @Transactional
-    public void incrementSkippedInterrupted(Long id) {
-        repository.incrementSkippedInterrupted(id);
+    public void incrementSkipped(Long id, SkipReason reason) {
+        switch (reason) {
+            case LICENSE          -> repository.incrementSkippedLicense(id);
+            case MISSING_METADATA -> repository.incrementSkippedMissingMetadata(id);
+            case MISSING_JATS     -> repository.incrementSkippedMissingJats(id);
+            case DUPLICATE        -> repository.incrementSkippedDuplicate(id);
+            case IO               -> repository.incrementSkippedIo(id);
+            case INTERRUPTED      -> repository.incrementSkippedInterrupted(id);
+        }
     }
 
     /**
@@ -153,6 +96,6 @@ public class PmcS3TrackerService {
     }
 
     public Optional<PmcS3Tracker> findLatestRunning() {
-        return repository.findTopByStatusOrderByStartedAtDesc(STATUS_RUNNING);
+        return repository.findTopByStatusOrderByStartedAtDesc(PmcS3TrackerStatus.RUNNING);
     }
 }

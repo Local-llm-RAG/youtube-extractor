@@ -6,7 +6,7 @@ import com.data.shared.DataSource;
 import com.data.oai.pubmed.oa.OaRecord;
 import com.data.oai.pubmed.oa.OaResponse;
 import com.data.oai.shared.AbstractOaiService;
-import com.data.oai.shared.util.LicenseFilter;
+import com.data.shared.license.LicenseFilter;
 import com.data.oai.shared.util.XmlFactories;
 import com.data.oai.shared.dto.OaiPage;
 import com.data.oai.shared.util.AuthorNameParser;

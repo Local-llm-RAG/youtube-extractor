@@ -1,6 +1,6 @@
 package com.data.oai.arxiv;
 
-import com.data.oai.shared.util.OaiHttpSupport;
+import com.data.shared.http.HttpExchangeSupport;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -22,14 +22,14 @@ public class ArxivClient {
     @RateLimiter(name = "arxiv")
     public byte[] listRecords(String baseUrl, String from, String until,
                               String token, String metadataPrefix) {
-        URI uri = OaiHttpSupport.buildListRecordsUri(baseUrl, from, until, token, metadataPrefix);
-        return OaiHttpSupport.executeOaiExchange(rest, uri, code -> false, uri.toString());
+        URI uri = HttpExchangeSupport.buildListRecordsUri(baseUrl, from, until, token, metadataPrefix);
+        return HttpExchangeSupport.executeExchange(rest, uri, code -> false, uri.toString());
     }
 
     @Retry(name = "arxiv")
     @RateLimiter(name = "arxiv")
     public byte[] downloadFile(String url) {
-        URI uri = OaiHttpSupport.toEncodedUri(url);
-        return OaiHttpSupport.executeOaiExchange(rest, uri, code -> false, url);
+        URI uri = HttpExchangeSupport.toEncodedUri(url);
+        return HttpExchangeSupport.executeExchange(rest, uri, code -> false, url);
     }
 }

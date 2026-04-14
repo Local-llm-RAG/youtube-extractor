@@ -1,12 +1,14 @@
 package com.data.pmcs3.persistence.repository;
 
 import com.data.pmcs3.persistence.entity.PmcS3Tracker;
+import com.data.pmcs3.persistence.entity.PmcS3TrackerStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @Repository
@@ -14,7 +16,17 @@ public interface PmcS3TrackerRepository extends JpaRepository<PmcS3Tracker, Long
 
     Optional<PmcS3Tracker> findByBatchId(String batchId);
 
-    Optional<PmcS3Tracker> findTopByStatusOrderByStartedAtDesc(String status);
+    Optional<PmcS3Tracker> findTopByStatusOrderByStartedAtDesc(PmcS3TrackerStatus status);
+
+    @Modifying
+    @Query("UPDATE PmcS3Tracker t SET t.status = :status, t.completedAt = :completedAt WHERE t.id = :id")
+    int markStatus(@Param("id") Long id,
+                   @Param("status") PmcS3TrackerStatus status,
+                   @Param("completedAt") OffsetDateTime completedAt);
+
+    @Modifying
+    @Query("UPDATE PmcS3Tracker t SET t.totalDiscovered = :discovered WHERE t.id = :id")
+    int updateDiscovered(@Param("id") Long id, @Param("discovered") int discovered);
 
     @Modifying
     @Query("update PmcS3Tracker t set t.totalProcessed = t.totalProcessed + 1 where t.id = :id")

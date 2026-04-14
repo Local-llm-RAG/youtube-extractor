@@ -3,7 +3,7 @@ package com.data.oai.zenodo;
 import com.data.config.properties.ZenodoOaiProps;
 import com.data.shared.DataSource;
 import com.data.oai.shared.AbstractOaiService;
-import com.data.oai.shared.util.LicenseFilter;
+import com.data.shared.license.LicenseFilter;
 import com.data.oai.shared.util.XmlFactories;
 import com.data.oai.shared.dto.Author;
 import com.data.oai.shared.dto.OaiPage;

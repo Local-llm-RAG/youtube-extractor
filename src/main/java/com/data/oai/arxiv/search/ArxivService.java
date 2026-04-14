@@ -5,7 +5,7 @@ import com.data.oai.persistence.repository.RecordRepository;
 import com.data.oai.persistence.entity.Tracker;
 import com.data.shared.DataSource;
 import com.data.oai.pipeline.GenericFacade;
-import com.data.shared.exception.OaiHarvestException;
+import com.data.shared.exception.HarvestException;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
@@ -78,7 +78,7 @@ public class ArxivService {
 
             return papers;
         } catch (Exception e) {
-            throw new OaiHarvestException(e.getMessage(), e);
+            throw new HarvestException(e.getMessage(), e);
         }
     }
 

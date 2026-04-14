@@ -1,7 +1,7 @@
-package com.data.oai.shared.util;
+package com.data.shared.http;
 
 import com.data.oai.RetryableApiException;
-import com.data.shared.exception.OaiHarvestException;
+import com.data.shared.exception.HarvestException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -12,13 +12,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.IntPredicate;
 
 /**
- * Shared HTTP utilities for OAI-PMH clients.
+ * Shared HTTP utilities for pipeline clients (OAI-PMH, PMC S3, and others).
  * Eliminates duplicated URI building, retryable detection, and URL encoding
  * across ArXiv, Zenodo, and PubMed clients.
  */
-public final class OaiHttpSupport {
+public final class HttpExchangeSupport {
 
-    private OaiHttpSupport() {}
+    private HttpExchangeSupport() {}
 
     /**
      * Builds a standard OAI-PMH ListRecords URI.
@@ -52,7 +52,7 @@ public final class OaiHttpSupport {
 
     /**
      * Throws {@link RetryableApiException} for transient HTTP errors (429, 502, 503, 504).
-     * Callers (ArXiv, Zenodo, PubMed) use this inside their RestClient exchange handlers
+     * Callers use this inside their RestClient exchange handlers
      * so that Resilience4j @Retry can intercept and retry.
      */
     public static void throwIfRetryable(HttpStatusCode status, String context) {
@@ -64,7 +64,7 @@ public final class OaiHttpSupport {
 
     /**
      * Decodes and re-encodes a URL to safely handle pre-encoded or special characters
-     * in PDF download URLs.
+     * in download URLs.
      */
     public static URI toEncodedUri(String url) {
         String decoded = UriUtils.decode(url, StandardCharsets.UTF_8);
@@ -72,11 +72,11 @@ public final class OaiHttpSupport {
     }
 
     /**
-     * Throws {@link OaiHarvestException} for a non-retryable HTTP failure.
+     * Throws {@link HarvestException} for a non-retryable HTTP failure.
      * Called after {@link #throwIfRetryable} to handle the remaining error cases.
      */
-    public static OaiHarvestException harvestException(HttpStatusCode status, String context) {
-        return new OaiHarvestException("OAI call failed. HTTP " + status.value() + " for " + context);
+    public static HarvestException harvestException(HttpStatusCode status, String context) {
+        return new HarvestException("HTTP call failed. HTTP " + status.value() + " for " + context);
     }
 
     /**
@@ -89,14 +89,44 @@ public final class OaiHttpSupport {
      *   <li>ArXiv passes {@code code -> false} (no special codes)</li>
      * </ul>
      */
-    public static byte[] executeOaiExchange(RestClient rest, URI uri,
-                                            IntPredicate acceptStatus, String context) {
+    public static byte[] executeExchange(RestClient rest, URI uri,
+                                         IntPredicate acceptStatus, String context) {
         return rest.get()
                 .uri(uri)
                 .exchange((req, res) -> {
                     HttpStatusCode status = res.getStatusCode();
                     if (status.is2xxSuccessful() || acceptStatus.test(status.value())) {
                         return res.bodyTo(byte[].class);
+                    }
+                    throwIfRetryable(status, context);
+                    throw harvestException(status, context);
+                });
+    }
+
+    /**
+     * Executes a GET request via the given RestClient and returns the body as byte[],
+     * or {@code null} when the response status matches {@code nullOnStatus}.
+     * <p>
+     * Use this overload when a specific non-2xx status (e.g. 404) should be treated
+     * as a "not found" signal rather than an error — the body is discarded and
+     * {@code null} is returned to the caller. All other non-2xx statuses are
+     * handled the same as {@link #executeExchange}: retryable codes throw
+     * {@link RetryableApiException}; permanent failures throw {@link HarvestException}.
+     *
+     * @param nullOnStatus predicate that returns {@code true} for status codes
+     *                     that should yield a {@code null} result (not an error)
+     */
+    public static byte[] executeExchangeOrNull(RestClient rest, URI uri,
+                                               IntPredicate nullOnStatus, String context) {
+        return rest.get()
+                .uri(uri)
+                .exchange((req, res) -> {
+                    HttpStatusCode status = res.getStatusCode();
+                    if (status.is2xxSuccessful()) {
+                        return res.bodyTo(byte[].class);
+                    }
+                    if (nullOnStatus.test(status.value())) {
+                        return null;
                     }
                     throwIfRetryable(status, context);
                     throw harvestException(status, context);
