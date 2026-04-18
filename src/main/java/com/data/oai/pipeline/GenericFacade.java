@@ -140,9 +140,17 @@ public class GenericFacade {
                     grobidDoc,
                     pdfResult.url());
         } catch (PdfDownloadException | DataIntegrityViolationException e) {
+            // Expected per-record soft failures: PDF missing/empty, or the record
+            // already exists in the DB. Neither warrants ERROR noise.
             log.warn("Skipping sourceId={}: {}", sourceId, e.getMessage());
         } catch (Exception e) {
-            log.warn("Failed to process sourceId={} with GROBID", sourceId, e);
+            // Retries on the GROBID call are exhausted at this point (see the
+            // resilience4j `grobid` retry config in application.yml). This is a
+            // real processing failure — escalate to ERROR so it is distinguishable
+            // from the soft-skips above. The ExceptionLoggingAspect has already
+            // recorded the unique signature in logs/unique-exceptions.log.
+            log.error("Failed to process sourceId={} with GROBID after retries exhausted (source={}): {}",
+                    sourceId, tracker.getDataSource(), e.getMessage(), e);
         } finally {
             // Atomically increment at DB level — thread-safe, no JPA entity mutation from pool threads
             trackerService.incrementProcessed(tracker.getId());

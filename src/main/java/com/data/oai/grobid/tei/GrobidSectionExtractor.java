@@ -33,13 +33,13 @@ final class GrobidSectionExtractor {
                 String sectionText = extractDivTextIncludingNestedDivs(div);
 
                 if (!sectionText.isBlank()) {
-                    out.add(new Section(sectionTitle, 1, sectionText, new ArrayList<>()));
+                    out.add(new Section(sectionTitle, sectionText, new ArrayList<>()));
                 }
             }
 
             String floating = extractFloatingBlocks(container);
-            if (!floating.isBlank() && out.stream().noneMatch(s -> s.getTitle().equals(containerName) && s.getLevel() == 1)) {
-                out.add(new Section(containerName, 1, floating, new ArrayList<>()));
+            if (!floating.isBlank() && out.stream().noneMatch(s -> s.getTitle().equals(containerName))) {
+                out.add(new Section(containerName, floating, new ArrayList<>()));
             }
         }
 

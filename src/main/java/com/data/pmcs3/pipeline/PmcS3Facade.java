@@ -248,12 +248,27 @@ public class PmcS3Facade {
      * Builds a {@link Record} DTO from the PMC S3 JSON metadata and JATS XML.
      * The JATS document is the authoritative source for authors and DOI;
      * the JSON metadata provides license, PMID, and scheduling info.
+     *
+     * <p>Datestamp priority (first non-null wins):
+     * <ol>
+     *   <li>JATS {@code <pub-date pub-type="epub">} — the electronic publication date,
+     *       which is the actual shipping date for PMC articles.</li>
+     *   <li>JATS {@code <pub-date pub-type="ppub">} — print publication date.</li>
+     *   <li>JSON metadata {@code publication_date} — PMC's summary field, typically
+     *       derived from the same JATS pub-dates but not guaranteed.</li>
+     *   <li>{@code null} — persistence layer lets {@code source_record.created_at::date}
+     *       stand in for datestamp queries via a backfill migration. A WARN is
+     *       emitted so null-datestamp drift is visible in the logs.</li>
+     * </ol>
+     * S3 object {@code LastModified} is deliberately not queried here: it would
+     * require an extra HEAD per article and, on PMC, is virtually always dominated
+     * by the JATS pub-dates being present.
      */
-    private static Record buildRecord(PubmedArticleMetadata metadata, String pmcId, String jatsXml, String language) {
+    private Record buildRecord(PubmedArticleMetadata metadata, String pmcId, String jatsXml, String language) {
         Record record = new Record();
         record.setSourceId(pmcId);
         record.setExternalIdentifier(metadata.pmid());
-        record.setDatestamp(metadata.publicationDate());
+        record.setDatestamp(resolveDatestamp(metadata, jatsXml, pmcId));
         record.setLicense(licenseUrlOrCode(metadata));
         record.setLanguage(language);
         record.setTitle(metadata.articleTitle());
@@ -275,6 +290,26 @@ public class PmcS3Facade {
         return Optional.ofNullable(metadata.licenseUrl())
                 .filter(s -> !s.isBlank())
                 .orElse(metadata.licenseCode());
+    }
+
+    /**
+     * Resolves the {@code source_record.datestamp} value for a PMC S3 article
+     * by trying JATS pub-dates first (the authoritative publisher-supplied
+     * dates), then the JSON metadata's summary field, and finally giving up
+     * with a WARN log so operators see null-datestamp drift.
+     *
+     * <p>See {@link #buildRecord} for the full priority rationale.
+     */
+    private String resolveDatestamp(PubmedArticleMetadata metadata, String jatsXml, String pmcId) {
+        String fromJats = JatsParser.extractPublicationDate(jatsXml);
+        if (fromJats != null) return fromJats;
+
+        String fromMetadata = metadata.publicationDate();
+        if (fromMetadata != null && !fromMetadata.isBlank()) return fromMetadata;
+
+        log.warn("PMC S3 pmcId={} produced null datestamp — no JATS <pub-date> and no metadata.publication_date; " +
+                "downstream queries will rely on created_at.", pmcId);
+        return null;
     }
 
     /**

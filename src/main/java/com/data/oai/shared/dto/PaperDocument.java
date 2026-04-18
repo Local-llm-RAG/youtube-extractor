@@ -19,7 +19,7 @@ public record PaperDocument(
         String docType) {
     public PaperDocument {
         sections = (sections == null || sections.isEmpty())
-                ? List.of(new Section("BODY", null, "", new ArrayList<>()))
+                ? List.of(new Section("BODY", "", new ArrayList<>()))
                 : List.copyOf(sections);
     }
 
@@ -34,7 +34,7 @@ public record PaperDocument(
                 externalIdentifier,
                 null,
                 null,
-                List.of(new Section("BODY", 1, "", List.of())),
+                List.of(new Section("BODY", "", List.of())),
                 null,
                 null,
                 List.of(),

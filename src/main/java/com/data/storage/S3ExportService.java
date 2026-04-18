@@ -294,7 +294,6 @@ public class S3ExportService {
 
         return new PaperExportDto.SectionDto(
                 section.getPos() != null ? section.getPos() : 0,
-                section.getLevel(),
                 section.getTitle(),
                 section.getText(),
                 chunkDtos

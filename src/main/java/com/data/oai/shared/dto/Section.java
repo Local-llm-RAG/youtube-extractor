@@ -10,7 +10,6 @@ import java.util.List;
 @AllArgsConstructor
 public class Section {
     String title;
-    Integer level;
     String text;
     List<EmbeddingDto> embeddings;
 }

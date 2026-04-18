@@ -31,7 +31,7 @@ public final class GrobidTeiMapperJsoup {
     public static PaperDocument toPaperDocument(String arxivId, String externalIdentifier, String sourceXml) {
         if (sourceXml == null || sourceXml.isBlank()) {
             return new PaperDocument(arxivId, externalIdentifier, null, null,
-                    List.of(new Section("BODY", 1, "", List.of())), sourceXml, NO_CONTENT_MARKER,
+                    List.of(new Section("BODY", "", List.of())), sourceXml, NO_CONTENT_MARKER,
                     List.of(), List.of(), List.of(), List.of(), List.of(), null);
         }
 
@@ -55,7 +55,7 @@ public final class GrobidTeiMapperJsoup {
         List<Section> sections = GrobidSectionExtractor.extractSections(tei);
         if (sections.isEmpty() || sections.stream().allMatch(s -> s.getText().isBlank())) {
             String bodyText = normalizeWs(firstText(tei, "text > body"));
-            sections = List.of(new Section("BODY", 1, bodyText == null ? "" : bodyText, new ArrayList<>()));
+            sections = List.of(new Section("BODY", bodyText == null ? "" : bodyText, new ArrayList<>()));
         }
 
         // Improved: no re-parse; preserve order better; avoid table dumps but keep captions.

@@ -35,9 +35,6 @@ public class SectionEntity {
     @Column(name = "title", nullable = false)
     private String title = "UNTITLED";
 
-    @Column(name = "level")
-    private Integer level;
-
     @Column(name = "text", nullable = false, columnDefinition = "text")
     private String text = "";
 

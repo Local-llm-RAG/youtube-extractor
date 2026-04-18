@@ -84,9 +84,6 @@ public class ArxivGPTCostEstimator {
         var sections = record.getDocument().getSections().stream();
 
         if (nonNull(filter)) {
-            if (nonNull(filter.getMaxLevel())) {
-                sections = sections.filter(s -> isNull(s.getLevel()) || s.getLevel() <= filter.getMaxLevel());
-            }
             if (nonNull(filter.getIncludeTitles()) && !filter.getIncludeTitles().isEmpty()) {
                 sections = sections.filter(s -> titleMatches(filter.getIncludeTitles(), s.getTitle()));
             }

@@ -149,7 +149,6 @@ public class PaperInternalService {
     private static SectionEntity toSectionEntity(Section s, int pos) {
         SectionEntity section = SectionEntity.builder()
                 .title(s.getTitle())
-                .level(s.getLevel())
                 .text(s.getText())
                 .pos(pos)
                 .embeddings(new ArrayList<>())

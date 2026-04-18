@@ -12,6 +12,7 @@ Reference documentation for the data extraction and processing platform. `CLAUDE
 | [rest-api.md](./rest-api.md) | REST API endpoint catalogue |
 | [package-structure.md](./package-structure.md) | Full `com.data.*` package tree with per-package purpose |
 | [database.md](./database.md) | Schema conventions, key column names, `DataSource` enum storage details |
+| [design-decisions.md](./design-decisions.md) | Intentional behaviors that look like bugs: tracker-counts-attempts, in-memory per-day harvest, blank-title fallback, license filter rejectND posture |
 
 ## Ownership
 

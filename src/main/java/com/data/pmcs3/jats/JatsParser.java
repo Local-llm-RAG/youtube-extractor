@@ -71,7 +71,7 @@ public final class JatsParser {
         List<Section> sections = extractSections(jats);
         if (sections.isEmpty()) {
             String bodyText = firstText(jats, "body");
-            sections = List.of(new Section("BODY", 1, bodyText == null ? "" : bodyText, List.of()));
+            sections = List.of(new Section("BODY", bodyText == null ? "" : bodyText, List.of()));
         }
         List<Reference> references = extractReferences(jats);
         String docType = extractDocType(jats);
@@ -129,6 +129,93 @@ public final class JatsParser {
         return el == null ? null : cleanText(el.text());
     }
 
+    /**
+     * Extracts the article publication date from JATS {@code <pub-date>} elements
+     * under {@code <article-meta>}, returning an ISO-8601 ({@code yyyy-MM-dd})
+     * string suitable for storing in {@code source_record.datestamp}.
+     *
+     * <p>JATS allows multiple {@code <pub-date>} elements on an article. We
+     * prefer electronic publication (what actually shipped on PMC) over print,
+     * and fall back through the broader set of publication-date variants before
+     * giving up:
+     * <ol>
+     *   <li>{@code <pub-date pub-type="epub">} — electronic publication date</li>
+     *   <li>{@code <pub-date pub-type="ppub">} — print publication date</li>
+     *   <li>{@code <pub-date publication-format="electronic">} — JATS 1.1+ equivalent of epub</li>
+     *   <li>{@code <pub-date publication-format="print">} — JATS 1.1+ equivalent of ppub</li>
+     *   <li>The first {@code <pub-date>} child of {@code <article-meta>}, whatever its type</li>
+     * </ol>
+     *
+     * <p>Each {@code <pub-date>} must carry at minimum a {@code <year>} child;
+     * {@code <month>} and {@code <day>} default to {@code 01} when absent. The
+     * resulting {@code LocalDate} is formatted as {@code yyyy-MM-dd}. Returns
+     * {@code null} if no usable {@code <pub-date>} is found or the year is not
+     * a valid four-digit integer.
+     */
+    public static String extractPublicationDate(String jatsXml) {
+        if (jatsXml == null || jatsXml.isBlank()) return null;
+        Document jats = Jsoup.parse(jatsXml, "", Parser.xmlParser());
+        Element articleMeta = jats.selectFirst("article-meta");
+        if (articleMeta == null) return null;
+
+        String[] selectors = {
+                "pub-date[pub-type=epub]",
+                "pub-date[pub-type=ppub]",
+                "pub-date[publication-format=electronic]",
+                "pub-date[publication-format=print]",
+                "pub-date"
+        };
+
+        for (String sel : selectors) {
+            Element pd = articleMeta.selectFirst(sel);
+            if (pd == null) continue;
+
+            String formatted = formatPubDate(pd);
+            if (formatted != null) return formatted;
+        }
+        return null;
+    }
+
+    /**
+     * Converts a JATS {@code <pub-date>} element to {@code yyyy-MM-dd}.
+     * Returns {@code null} if the {@code <year>} child is missing or not
+     * a valid four-digit integer. Missing {@code <month>} / {@code <day>}
+     * default to {@code 1}.
+     */
+    private static String formatPubDate(Element pubDate) {
+        String year = firstText(pubDate, "year");
+        if (year == null || year.isBlank()) return null;
+
+        int y;
+        try {
+            y = Integer.parseInt(year.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (y < 1000 || y > 9999) return null;
+
+        int m = parseIntOrDefault(firstText(pubDate, "month"), 1);
+        int d = parseIntOrDefault(firstText(pubDate, "day"), 1);
+        m = Math.max(1, Math.min(12, m));
+        // Validate via LocalDate so we normalize malformed day values (e.g. day=32
+        // or Feb 30) to the first of the month rather than throwing.
+        try {
+            java.time.LocalDate.of(y, m, d);
+        } catch (java.time.DateTimeException e) {
+            d = 1;
+        }
+        return String.format("%04d-%02d-%02d", y, m, d);
+    }
+
+    private static int parseIntOrDefault(String raw, int defaultValue) {
+        if (raw == null || raw.isBlank()) return defaultValue;
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
     // ---------------------------------------------------------------
     // Private helpers
     // ---------------------------------------------------------------
@@ -144,8 +231,7 @@ public final class JatsParser {
                 .map(sec -> {
                     String title = firstText(sec, "title");
                     String text = collectSectionText(sec);
-                    int level = inferLevel(sec);
-                    return new Section(title == null ? "SECTION" : title, level, text, List.of());
+                    return new Section(title == null ? "SECTION" : title, text, List.of());
                 })
                 .toList();
     }
@@ -158,16 +244,6 @@ public final class JatsParser {
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.joining("\n"))
                 .trim();
-    }
-
-    private static int inferLevel(Element sec) {
-        int level = 1;
-        Element parent = sec.parent();
-        while (parent != null && !"body".equals(parent.tagName())) {
-            if ("sec".equals(parent.tagName())) level++;
-            parent = parent.parent();
-        }
-        return level;
     }
 
     private static List<String> extractKeywords(Document jats) {

@@ -45,7 +45,6 @@ public record PaperExportDto(
 
     public record SectionDto(
             int pos,
-            Integer level,
             String title,
             String text,
             List<EmbeddingChunkDto> chunks

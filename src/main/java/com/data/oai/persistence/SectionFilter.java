@@ -13,6 +13,5 @@ public class SectionFilter {
     private Set<String> includeTitles;
     private Set<String> excludeTitles;
     private Integer maxSections;
-    private Integer maxLevel;
     private Integer maxCharsTotal;
 }
